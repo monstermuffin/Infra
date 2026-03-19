@@ -7,7 +7,7 @@
   gather_facts: true
 
   roles:
-    - role: lxc/sonarr
+    - role: apps/podman/sonarr
       tags:
         - sonarr
         - podman
