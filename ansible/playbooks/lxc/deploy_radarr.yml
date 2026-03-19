@@ -1,0 +1,14 @@
+---
+# Deploy Radarr into its LXC using rootful Podman + system Quadlet
+
+- name: Deploy Radarr
+  hosts: radarr01.aah.muffn.io
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: lxc/radarr
+      tags:
+        - radarr
+        - podman
+        - lxc_app
