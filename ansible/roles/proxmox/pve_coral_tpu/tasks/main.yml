@@ -1,0 +1,137 @@
+---
+- name: Skip Coral TPU setup if not enabled
+  ansible.builtin.debug:
+    msg: "Coral TPU installation skipped (pve_coral_enabled: {{ pve_coral_enabled }})"
+  when: not pve_coral_enabled
+
+- name: Coral TPU installation tasks
+  when: pve_coral_enabled
+  tags:
+    - coral
+    - tpu
+  block:
+    - name: Download Google Coral GPG key
+      ansible.builtin.get_url:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        dest: /usr/share/keyrings/coral-edgetpu-archive-keyring.gpg
+        mode: '0644'
+      tags:
+        - repo
+        - repository
+
+    - name: Add Google Coral repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/coral-edgetpu-archive-keyring.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main"
+        filename: coral-edgetpu
+        state: present
+      tags:
+        - repo
+        - repository
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      tags:
+        - repo
+        - repository
+
+    - name: Pre-accept EULA for max frequency runtime
+      ansible.builtin.debconf:
+        name: libedgetpu
+        question: libedgetpu/accepted-eula
+        value: 'true'
+        vtype: boolean
+      when: pve_coral_runtime_version == "max"
+      tags:
+        - install
+        - runtime
+
+    - name: Install Edge TPU runtime
+      ansible.builtin.apt:
+        name: "libedgetpu1-{{ pve_coral_runtime_version }}"
+        state: present
+      tags:
+        - install
+        - runtime
+
+    - name: Install Python3 PyCoral library
+      ansible.builtin.apt:
+        name: python3-pycoral
+        state: present
+      when: pve_coral_install_pycoral
+      tags:
+        - install
+        - pycoral
+
+    - name: Create udev rule for stable Coral TPU device node
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/99-coral-tpu.rules
+        mode: '0644'
+        content: |
+          # Before initialization (Global Unichip)
+          SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", SYMLINK+="coral-tpu", MODE="0660", GROUP="plugdev"
+          # After initialization (Google Inc.)
+          SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", SYMLINK+="coral-tpu", MODE="0660", GROUP="plugdev"
+      when: pve_coral_create_udev_rule | bool
+      notify: Reload udev rules
+      tags:
+        - install
+        - udev
+
+    - name: Check for Coral USB device
+      ansible.builtin.shell: |
+        set -o pipefail
+        lsusb | grep -i "Global Unichip\|Google Inc."
+      args:
+        executable: /bin/bash
+      register: coral_usb_check
+      changed_when: false
+      failed_when: false
+      when: pve_coral_verify_install
+      tags:
+        - verify
+        - check
+
+    - name: Check if device is initialized (Google Inc.)
+      ansible.builtin.shell: |
+        set -o pipefail
+        lsusb | grep -i "18d1:9302\|Google Inc"
+      args:
+        executable: /bin/bash
+      register: coral_initialized_check
+      changed_when: false
+      failed_when: false
+      when: pve_coral_verify_install
+      tags:
+        - verify
+        - check
+
+    - name: Display Coral USB detection result
+      ansible.builtin.debug:
+        msg: |
+          Coral USB: {{ 'DETECTED' if coral_usb_check.rc == 0 else 'NOT DETECTED' }}
+          {% if coral_usb_check.rc == 0 %}
+          {{ coral_usb_check.stdout }}
+          Status: {{ 'Initialized (Google Inc.)' if coral_initialized_check.rc == 0 else 'Not initialized (Global Unichip) - will initialize on first use' }}
+          {% endif %}
+      when: pve_coral_verify_install
+      tags:
+        - verify
+        - check
+
+    - name: Check Edge TPU runtime version
+      ansible.builtin.command: dpkg -l libedgetpu1-{{ pve_coral_runtime_version }}
+      register: edgetpu_version
+      changed_when: false
+      failed_when: false
+      tags:
+        - info
+        - verify
+
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg: |
+          Runtime: {{ pve_coral_runtime_version }} | Installed: {{ 'yes' if edgetpu_version.rc == 0 else 'no' }} | PyCoral: {{ 'yes' if pve_coral_install_pycoral else 'no' }}
+      tags:
+        - info
+        - verify

@@ -1,0 +1,11 @@
+---
+pve_coral_enabled: false
+
+# "std" = standard clock (cooler), "max" = maximum clock (faster, runs spicy)
+pve_coral_runtime_version: "max"
+
+pve_coral_install_pycoral: false
+pve_coral_verify_install: true
+
+# Creates /dev/coral-tpu symlink via udev, needed for LXC passthrough
+pve_coral_create_udev_rule: true
