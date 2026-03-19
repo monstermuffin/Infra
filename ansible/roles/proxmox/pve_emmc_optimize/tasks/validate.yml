@@ -1,0 +1,79 @@
+---
+- name: Fail if pve_emmc_optimize_enabled is not explicitly set
+  ansible.builtin.fail:
+    msg: "pve_emmc_optimize_enabled must be set to true in host_vars for eMMC hosts"
+  when: not (pve_emmc_optimize_enabled | bool)
+  tags:
+    - always
+
+- name: Validate state parameter
+  ansible.builtin.fail:
+    msg: "pve_emmc_optimize_state must be 'present', 'absent', or empty (skip), got: {{ pve_emmc_optimize_state }}"
+  when:
+    - pve_emmc_optimize_state | default('') | length > 0
+    - pve_emmc_optimize_state not in ["present", "absent"]
+  tags:
+    - always
+
+- name: Detect storage devices
+  ansible.builtin.shell: |
+    set -o pipefail
+    lsblk -d -n -o NAME,ROTA,TYPE | grep disk | awk '$2==0 {print $1}'
+  args:
+    executable: /bin/bash
+  register: _storage_devices
+  changed_when: false
+  failed_when: false
+  tags:
+    - always
+
+- name: Check for eMMC storage
+  ansible.builtin.shell: |
+    set -o pipefail
+    for dev in {{ _storage_devices.stdout_lines | join(' ') }}; do
+      if [[ -d "/sys/block/${dev}/device" ]]; then
+        model=$(cat /sys/block/${dev}/device/model 2>/dev/null || echo "")
+        type=$(cat /sys/block/${dev}/device/type 2>/dev/null || echo "")
+        if [[ "$model" == *"MMC"* ]] || [[ "$type" == "MMC" ]] || [[ "$dev" == mmcblk* ]]; then
+          echo "$dev"
+          exit 0
+        fi
+      fi
+    done
+    exit 1
+  args:
+    executable: /bin/bash
+  register: _emmc_device
+  changed_when: false
+  failed_when: false
+  tags:
+    - always
+
+- name: Warning if no eMMC detected
+  ansible.builtin.debug:
+    msg: "No eMMC detected (devices: {{ _storage_devices.stdout_lines | join(', ') }}), continuing anyway"
+  when:
+    - _emmc_device.rc != 0
+    - pve_emmc_optimize_enabled | bool
+  tags:
+    - always
+
+- name: Validate RRD configuration
+  ansible.builtin.fail:
+    msg: "pve_emmc_optimize_rrd_disk must be set when pve_emmc_optimize_rrd_mode is 'relocate' or 'both'"
+  when:
+    - pve_emmc_optimize_rrd_mode in ["relocate", "both"]
+    - pve_emmc_optimize_rrd_disk | length == 0
+    - pve_emmc_optimize_state == "present"
+  tags:
+    - always
+
+- name: Validate logs configuration
+  ansible.builtin.fail:
+    msg: "pve_emmc_optimize_logs_disk must be a valid path or empty string"
+  when:
+    - pve_emmc_optimize_logs_disk | length > 0
+    - not pve_emmc_optimize_logs_disk.startswith('/')
+    - pve_emmc_optimize_state == "present"
+  tags:
+    - always

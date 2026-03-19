@@ -1,0 +1,137 @@
+---
+- name: Get eMMC device name
+  ansible.builtin.shell: |
+    set -o pipefail
+    for dev in /sys/block/mmcblk*; do
+      if [[ -d "$dev" ]]; then
+        basename "$dev"
+        exit 0
+      fi
+    done
+    # Fallback: check for MMC in device model
+    lsblk -d -n -o NAME,ROTA | grep "0$" | awk '{print $1}' | while read -r dev; do
+      model=$(cat /sys/block/${dev}/device/model 2>/dev/null || echo "")
+      if [[ "$model" == *"MMC"* ]]; then
+        echo "$dev"
+        exit 0
+      fi
+    done
+    exit 1
+  args:
+    executable: /bin/bash
+  register: _emmc_device_name
+  changed_when: false
+  failed_when: false
+
+- name: Get eMMC size
+  ansible.builtin.shell: |
+    lsblk -b -d -n -o SIZE /dev/{{ _emmc_device_name.stdout }}
+  args:
+    executable: /bin/bash
+  register: _emmc_size_bytes
+  changed_when: false
+  when: _emmc_device_name.rc == 0
+
+- name: Get root filesystem device
+  ansible.builtin.shell: |
+    set -o pipefail
+    df / | tail -1 | awk '{print $1}' | sed 's|/dev/mapper/||;s|/dev/||'
+  args:
+    executable: /bin/bash
+  register: _root_device
+  changed_when: false
+
+- name: Get lifetime writes from ext4 filesystem
+  ansible.builtin.shell: |
+    set -o pipefail
+    if [[ -f /sys/fs/ext4/{{ _root_device.stdout }}/lifetime_write_kbytes ]]; then
+      cat /sys/fs/ext4/{{ _root_device.stdout }}/lifetime_write_kbytes
+    else
+      echo "0"
+    fi
+  args:
+    executable: /bin/bash
+  register: _lifetime_writes_kb
+  changed_when: false
+
+- name: Get filesystem creation time
+  ansible.builtin.shell: |
+    set -o pipefail
+    tune2fs -l /dev/mapper/{{ _root_device.stdout }} 2>/dev/null | grep "Filesystem created" | sed 's/Filesystem created:\s*//' || echo "unknown"
+  args:
+    executable: /bin/bash
+  register: _fs_created
+  changed_when: false
+  failed_when: false
+
+- name: Calculate statistics
+  ansible.builtin.set_fact:
+    _emmc_stats:
+      device: "{{ _emmc_device_name.stdout | default('unknown') }}"
+      size_gb: "{{ (_emmc_size_bytes.stdout | default(0) | int / 1024 / 1024 / 1024) | round(2) }}"
+      lifetime_writes_tb: "{{ (_lifetime_writes_kb.stdout | default(0) | int / 1024 / 1024 / 1024) | round(2) }}"
+      filesystem_created: "{{ _fs_created.stdout | default('unknown') }}"
+      estimated_total_writes_tb: "{{ ((_emmc_size_bytes.stdout | default(0) | int / 1024 / 1024 / 1024) * pve_emmc_optimize_pe_cycles) | round(2) }}"
+      percent_used: "{{ ((_lifetime_writes_kb.stdout | default(0) | int / 1024 / 1024 / 1024) / ((_emmc_size_bytes.stdout | default(1) | int / 1024 / 1024 / 1024) * pve_emmc_optimize_pe_cycles) * 100) | round(2) }}"
+
+- name: Display eMMC statistics
+  ansible.builtin.debug:
+    msg: |
+      Device: {{ _emmc_stats.device }} | {{ _emmc_stats.size_gb }}GB | Created: {{ _emmc_stats.filesystem_created }}
+      Writes: {{ _emmc_stats.lifetime_writes_tb }}TB / {{ _emmc_stats.estimated_total_writes_tb }}TB estimated lifespan ({{ _emmc_stats.percent_used }}%)
+      {% if _emmc_stats.percent_used | float > pve_emmc_optimize_warning_threshold %}
+      WARNING: exceeded {{ pve_emmc_optimize_warning_threshold }}% of estimated lifespan
+      {% endif %}
+
+- name: Check if swap is enabled
+  ansible.builtin.shell: |
+    set -o pipefail
+    swapon --show --noheadings | wc -l
+  args:
+    executable: /bin/bash
+  register: _swap_enabled
+  changed_when: false
+
+- name: Check current log location
+  ansible.builtin.stat:
+    path: /var/log
+  register: _log_location
+
+- name: Check if logs are on separate filesystem
+  ansible.builtin.shell: |
+    set -o pipefail
+    df /var/log | tail -1 | awk '{print $1}'
+  args:
+    executable: /bin/bash
+  register: _log_filesystem
+  changed_when: false
+
+- name: Check RRD location
+  ansible.builtin.stat:
+    path: /var/lib/rrdcached/db
+  register: _rrd_location
+
+- name: Check if RRD is on separate filesystem
+  ansible.builtin.shell: |
+    set -o pipefail
+    df /var/lib/rrdcached/db | tail -1 | awk '{print $1}'
+  args:
+    executable: /bin/bash
+  register: _rrd_filesystem
+  changed_when: false
+
+- name: Check rrdcached write timeout
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep "^WRITE_TIMEOUT=" /etc/default/rrdcached | cut -d= -f2 || echo "default"
+  args:
+    executable: /bin/bash
+  register: _rrd_write_timeout
+  changed_when: false
+
+- name: Display current optimization status
+  ansible.builtin.debug:
+    msg: |
+      Swap: {{ 'enabled' if _swap_enabled.stdout | int > 0 else 'disabled' }}
+      Logs: {{ _log_filesystem.stdout }} ({{ 'on eMMC' if _root_device.stdout in _log_filesystem.stdout else 'external' }})
+      RRD: {{ _rrd_filesystem.stdout }} ({{ 'on eMMC' if _root_device.stdout in _rrd_filesystem.stdout else 'external' }}) | timeout: {{ _rrd_write_timeout.stdout }}s

@@ -1,0 +1,96 @@
+---
+- name: Get root filesystem device and current options
+  ansible.builtin.shell: |
+    set -o pipefail
+    mount | grep " / " | head -1
+  args:
+    executable: /bin/bash
+  register: _root_mount
+  changed_when: false
+
+- name: Parse root mount information
+  ansible.builtin.set_fact:
+    _root_device: "{{ _root_mount.stdout.split()[0] }}"
+    _root_fstype: "{{ _root_mount.stdout.split()[4] }}"
+    _root_options: "{{ _root_mount.stdout.split('(')[1].split(')')[0] }}"
+
+- name: Check if optimizations are already applied
+  ansible.builtin.set_fact:
+    _needs_noatime: "{{ 'noatime' not in _root_options }}"
+    _needs_nodiratime: "{{ 'nodiratime' not in _root_options }}"
+    _needs_commit: "{{ ('commit=' + (pve_emmc_optimize_commit_interval | string)) not in _root_options }}"
+
+- name: Display current mount options
+  ansible.builtin.debug:
+    msg: |
+      Current root filesystem mount options: {{ _root_options }}
+      Will add: {% if _needs_noatime %}noatime {% endif %}{% if _needs_nodiratime %}nodiratime {% endif %}{% if _needs_commit %}commit={{ pve_emmc_optimize_commit_interval }}{% endif %}
+
+- name: Backup /etc/fstab
+  ansible.builtin.copy:
+    src: /etc/fstab
+    dest: "{{ pve_emmc_optimize_backup_dir }}/fstab-fs-opts.{{ ansible_date_time.epoch }}"
+    remote_src: true
+    mode: '0600'
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Build optimized mount options
+  ansible.builtin.set_fact:
+    _optimized_options: >-
+      {% set opts = _root_options.split(',') %}
+      {% if 'relatime' in opts %}{% set _ = opts.remove('relatime') %}{% endif %}
+      {% if 'atime' in opts %}{% set _ = opts.remove('atime') %}{% endif %}
+      {% if _needs_noatime %}{% set _ = opts.append('noatime') %}{% endif %}
+      {% if _needs_nodiratime %}{% set _ = opts.append('nodiratime') %}{% endif %}
+      {% if _needs_commit %}
+      {% for opt in opts %}{% if opt.startswith('commit=') %}{% set _ = opts.remove(opt) %}{% endif %}{% endfor %}
+      {% set _ = opts.append('commit=' + (pve_emmc_optimize_commit_interval | string)) %}
+      {% endif %}
+      {{ opts | join(',') }}
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Get current fstab root entry
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep "^\S\+\s\+/\s\+" /etc/fstab | head -1
+  args:
+    executable: /bin/bash
+  register: _fstab_root_line
+  changed_when: false
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Parse fstab options
+  ansible.builtin.set_fact:
+    _fstab_parts: "{{ _fstab_root_line.stdout.split() }}"
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Build new fstab entry
+  ansible.builtin.set_fact:
+    _new_fstab_line: "{{ _fstab_parts[0] }} {{ _fstab_parts[1] }} {{ _fstab_parts[2] }} {{ _optimized_options }} {{ _fstab_parts[4] }} {{ _fstab_parts[5] }}"
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Update root filesystem entry in /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^{{ _fstab_parts[0] | regex_escape }}\s+/\s+'
+    line: "{{ _new_fstab_line }}"
+    backup: false
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+
+- name: Remount root filesystem with new options
+  ansible.builtin.command: mount -o remount,{{ _optimized_options }} /
+  when: _needs_noatime or _needs_nodiratime or _needs_commit
+  changed_when: true
+
+- name: Verify new mount options
+  ansible.builtin.shell: |
+    set -o pipefail
+    mount | grep " / " | head -1
+  args:
+    executable: /bin/bash
+  register: _new_root_mount
+  changed_when: false
+
+- name: Display filesystem optimization results
+  ansible.builtin.debug:
+    msg: "FS optimized ({{ _root_device }}): {{ _root_options }} -> {{ _new_root_mount.stdout.split('(')[1].split(')')[0] }}"

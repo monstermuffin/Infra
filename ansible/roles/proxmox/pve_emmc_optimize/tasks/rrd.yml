@@ -1,0 +1,186 @@
+---
+- name: Optimize rrdcached write timeout
+  when: pve_emmc_optimize_rrd_mode in ["timeout", "both"]
+  block:
+    - name: Backup rrdcached default config
+      ansible.builtin.copy:
+        src: /etc/default/rrdcached
+        dest: "{{ pve_emmc_optimize_backup_dir }}/rrdcached.{{ ansible_date_time.epoch }}"
+        remote_src: true
+        mode: '0600'
+
+    - name: Set WRITE_TIMEOUT in rrdcached config
+      ansible.builtin.lineinfile:
+        path: /etc/default/rrdcached
+        regexp: '^WRITE_TIMEOUT='
+        line: "WRITE_TIMEOUT={{ pve_emmc_optimize_rrd_write_timeout }}"
+        backup: false
+
+    - name: Comment out JOURNAL_PATH in rrdcached config
+      ansible.builtin.lineinfile:
+        path: /etc/default/rrdcached
+        regexp: '^JOURNAL_PATH='
+        line: '#JOURNAL_PATH=-j /var/lib/rrdcached/journal/'
+        backup: false
+
+    - name: Add FLUSH_TIMEOUT to rrdcached config
+      ansible.builtin.lineinfile:
+        path: /etc/default/rrdcached
+        regexp: '^FLUSH_TIMEOUT='
+        line: "FLUSH_TIMEOUT={{ pve_emmc_optimize_rrd_write_timeout | int * 2 }}"
+        insertafter: '^WRITE_TIMEOUT='
+        backup: false
+
+    - name: Restart rrdcached service
+      ansible.builtin.systemd:
+        name: rrdcached
+        state: restarted
+
+- name: Relocate RRD database
+  when: pve_emmc_optimize_rrd_mode in ["relocate", "both"]
+  block:
+    - name: Validate RRD disk path
+      ansible.builtin.fail:
+        msg: "pve_emmc_optimize_rrd_disk must be set when mode is 'relocate' or 'both'"
+      when: pve_emmc_optimize_rrd_disk | length == 0
+
+    - name: Check if RRD disk is a block device
+      ansible.builtin.stat:
+        path: "{{ pve_emmc_optimize_rrd_disk }}"
+      register: _rrd_disk_stat
+
+    - name: Determine if RRD disk is a device or mount point
+      ansible.builtin.set_fact:
+        _rrd_is_device: "{{ _rrd_disk_stat.stat.exists and _rrd_disk_stat.stat.isblk | default(false) }}"
+
+    - name: Get filesystem type of RRD disk
+      ansible.builtin.shell: |
+        set -o pipefail
+        blkid -o value -s TYPE {{ pve_emmc_optimize_rrd_disk }}
+      args:
+        executable: /bin/bash
+      register: _rrd_fs_type
+      changed_when: false
+      failed_when: false
+      when: _rrd_is_device | bool
+
+    - name: Check if RRD disk has filesystem
+      ansible.builtin.set_fact:
+        _rrd_has_fs: "{{ _rrd_fs_type.stdout | default('') | length > 0 }}"
+      when: _rrd_is_device | bool
+
+    - name: Create filesystem on RRD disk
+      community.general.filesystem:
+        dev: "{{ pve_emmc_optimize_rrd_disk }}"
+        fstype: "{{ pve_emmc_optimize_rrd_fstype }}"
+        opts: "-L pve-rrd"
+      when:
+        - _rrd_is_device | bool
+        - not (_rrd_has_fs | default(false) | bool)
+        - pve_emmc_optimize_rrd_create_fs | bool
+
+    - name: Fail if RRD disk has no filesystem and auto-create is disabled
+      ansible.builtin.fail:
+        msg: |
+          RRD disk {{ pve_emmc_optimize_rrd_disk }} has no filesystem.
+          Set pve_emmc_optimize_rrd_create_fs=true to auto-create, or format manually.
+      when:
+        - _rrd_is_device | bool
+        - not (_rrd_has_fs | default(false) | bool)
+        - not (pve_emmc_optimize_rrd_create_fs | bool)
+
+    - name: Stop rrdcached service
+      ansible.builtin.systemd:
+        name: rrdcached
+        state: stopped
+
+    - name: Create temporary mount point
+      ansible.builtin.file:
+        path: /var/lib/rrdcached/db.new
+        state: directory
+        mode: '0755'
+
+    - name: Mount RRD disk to temporary location
+      ansible.posix.mount:
+        path: /var/lib/rrdcached/db.new
+        src: "{{ pve_emmc_optimize_rrd_disk if _rrd_is_device else pve_emmc_optimize_rrd_disk }}"
+        fstype: "{{ _rrd_fs_type.stdout | default(pve_emmc_optimize_rrd_fstype) }}"
+        state: mounted
+        opts: "defaults,noatime,nodiratime"
+
+    - name: Sync existing RRD database to new location
+      ansible.builtin.shell: |
+        rsync -avAXx /var/lib/rrdcached/db/ /var/lib/rrdcached/db.new/
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Backup original RRD database location info
+      ansible.builtin.copy:
+        content: |
+          Original /var/lib/rrdcached/db mount
+          Moved to: {{ pve_emmc_optimize_rrd_disk }}
+          Date: {{ ansible_date_time.iso8601 }}
+        dest: "{{ pve_emmc_optimize_backup_dir }}/rrd-db-original.txt"
+        mode: '0600'
+
+    - name: Unmount temporary location
+      ansible.posix.mount:
+        path: /var/lib/rrdcached/db.new
+        state: unmounted
+
+    - name: Rename original RRD database directory
+      ansible.builtin.command: mv /var/lib/rrdcached/db /var/lib/rrdcached/db.old
+      changed_when: true
+
+    - name: Create new RRD database mount point
+      ansible.builtin.file:
+        path: /var/lib/rrdcached/db
+        state: directory
+        mode: '0755'
+
+    - name: Mount RRD disk to /var/lib/rrdcached/db
+      ansible.posix.mount:
+        path: /var/lib/rrdcached/db
+        src: "{{ pve_emmc_optimize_rrd_disk if _rrd_is_device else pve_emmc_optimize_rrd_disk }}"
+        fstype: "{{ _rrd_fs_type.stdout | default(pve_emmc_optimize_rrd_fstype) }}"
+        state: mounted
+        opts: "defaults,noatime,nodiratime"
+
+    - name: Add RRD mount to /etc/fstab
+      ansible.posix.mount:
+        path: /var/lib/rrdcached/db
+        src: "{{ pve_emmc_optimize_rrd_disk if _rrd_is_device else pve_emmc_optimize_rrd_disk }}"
+        fstype: "{{ _rrd_fs_type.stdout | default(pve_emmc_optimize_rrd_fstype) }}"
+        opts: "defaults,noatime,nodiratime"
+        state: present
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Start rrdcached service
+      ansible.builtin.systemd:
+        name: rrdcached
+        state: started
+
+    - name: Remove temporary mount point
+      ansible.builtin.file:
+        path: /var/lib/rrdcached/db.new
+        state: absent
+
+    - name: Remove old RRD database directory (after 60 seconds)
+      ansible.builtin.shell: |
+        sleep 60 && rm -rf /var/lib/rrdcached/db.old
+      args:
+        executable: /bin/bash
+      async: 90
+      poll: 0
+      changed_when: false
+
+- name: Display RRD optimization results
+  ansible.builtin.debug:
+    msg: >-
+      RRD optimized (mode: {{ pve_emmc_optimize_rrd_mode }}
+      {%- if pve_emmc_optimize_rrd_mode in ["timeout", "both"] %}, write timeout: {{ pve_emmc_optimize_rrd_write_timeout }}s{% endif %}
+      {%- if pve_emmc_optimize_rrd_mode in ["relocate", "both"] %}, relocated to: {{ pve_emmc_optimize_rrd_disk }}{% endif %})

@@ -1,0 +1,70 @@
+---
+- name: Include validation tasks
+  ansible.builtin.include_tasks: validate.yml
+  tags:
+    - always
+
+- name: Include monitoring tasks (info only)
+  ansible.builtin.include_tasks: monitoring.yml
+  when: pve_emmc_optimize_monitoring | bool
+  tags:
+    - info
+    - monitoring
+    - stats
+
+- name: Apply eMMC optimizations
+  when:
+    - pve_emmc_optimize_enabled | bool
+    - pve_emmc_optimize_state | default('') | length > 0
+    - pve_emmc_optimize_state == "present"
+  tags:
+    - apply
+    - optimize
+    - present
+  block:
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "{{ pve_emmc_optimize_backup_dir }}"
+        state: directory
+        mode: '0700'
+      tags:
+        - always
+
+    - name: Include swap optimization tasks
+      ansible.builtin.include_tasks: swap.yml
+      when: pve_emmc_optimize_swap_disable | bool
+      tags:
+        - swap
+
+    - name: Include log relocation tasks
+      ansible.builtin.include_tasks: logs.yml
+      when: pve_emmc_optimize_logs_disk | length > 0
+      tags:
+        - logs
+
+    - name: Include RRD optimization tasks
+      ansible.builtin.include_tasks: rrd.yml
+      when: pve_emmc_optimize_rrd_mode in ["timeout", "relocate", "both"]
+      tags:
+        - rrd
+        - rrdcached
+
+    - name: Include filesystem optimization tasks
+      ansible.builtin.include_tasks: filesystem.yml
+      when: pve_emmc_optimize_filesystem_opts | bool
+      tags:
+        - filesystem
+        - mount
+
+- name: Revert eMMC optimizations
+  when:
+    - pve_emmc_optimize_enabled | bool
+    - pve_emmc_optimize_state | default('') | length > 0
+    - pve_emmc_optimize_state == "absent"
+  tags:
+    - revert
+    - restore
+    - absent
+  block:
+    - name: Include revert tasks
+      ansible.builtin.include_tasks: revert.yml

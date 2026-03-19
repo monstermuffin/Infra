@@ -1,0 +1,66 @@
+---
+- name: Check if swap is currently enabled
+  ansible.builtin.shell: |
+    swapon --show --noheadings
+  register: _swap_status
+  changed_when: false
+  failed_when: false
+
+- name: Backup /etc/fstab
+  ansible.builtin.copy:
+    src: /etc/fstab
+    dest: "{{ pve_emmc_optimize_backup_dir }}/fstab.{{ ansible_date_time.epoch }}"
+    remote_src: true
+    mode: '0600'
+  when: _swap_status.stdout | length > 0
+
+- name: Disable all swap devices
+  ansible.builtin.command: swapoff -a
+  when: _swap_status.stdout | length > 0
+  changed_when: true
+
+- name: Get swap device information
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -E "^[^#].*\sswap\s" /etc/fstab | awk '{print $1}' || true
+  args:
+    executable: /bin/bash
+  register: _swap_devices
+  changed_when: false
+
+- name: Remove swap entries from /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^(?!#).*\s+swap\s+'
+    state: absent
+    backup: false
+  when: _swap_status.stdout | length > 0
+
+- name: Check for LVM swap logical volume
+  ansible.builtin.shell: |
+    set -o pipefail
+    lvs --noheadings -o lv_name,vg_name | grep -E "\sswap\s" | awk '{print $2"/"$1}' || true
+  args:
+    executable: /bin/bash
+  register: _swap_lv
+  changed_when: false
+  failed_when: false
+
+- name: Remove swap logical volume
+  ansible.builtin.command: lvremove -f /dev/{{ _swap_lv.stdout }}
+  when:
+    - _swap_lv.stdout | length > 0
+    - _swap_status.stdout | length > 0
+  changed_when: true
+
+- name: Set vm.swappiness to 0
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: "0"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-emmc-optimize.conf
+    reload: true
+
+- name: Display swap optimization results
+  ansible.builtin.debug:
+    msg: "Swap disabled (devices: {{ _swap_devices.stdout_lines | default(['none']) | join(', ') }}, LV removed: {{ _swap_lv.stdout | default('none') }}, swappiness: 0)"

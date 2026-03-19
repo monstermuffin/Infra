@@ -1,0 +1,131 @@
+---
+- name: Validate logs disk path
+  ansible.builtin.fail:
+    msg: "pve_emmc_optimize_logs_disk must be set to a valid device path or mount point"
+  when: pve_emmc_optimize_logs_disk | length == 0
+
+- name: Check if logs disk is a block device
+  ansible.builtin.stat:
+    path: "{{ pve_emmc_optimize_logs_disk }}"
+  register: _logs_disk_stat
+
+- name: Determine if logs disk is a device or mount point
+  ansible.builtin.set_fact:
+    _logs_is_device: "{{ _logs_disk_stat.stat.exists and _logs_disk_stat.stat.isblk | default(false) }}"
+
+- name: Get filesystem type of logs disk
+  ansible.builtin.shell: |
+    set -o pipefail
+    blkid -o value -s TYPE {{ pve_emmc_optimize_logs_disk }}
+  args:
+    executable: /bin/bash
+  register: _logs_fs_type
+  changed_when: false
+  failed_when: false
+  when: _logs_is_device | bool
+
+- name: Check if logs disk has filesystem
+  ansible.builtin.set_fact:
+    _logs_has_fs: "{{ _logs_fs_type.stdout | default('') | length > 0 }}"
+  when: _logs_is_device | bool
+
+- name: Create filesystem on logs disk
+  community.general.filesystem:
+    dev: "{{ pve_emmc_optimize_logs_disk }}"
+    fstype: "{{ pve_emmc_optimize_logs_fstype }}"
+    opts: "-L pve-logs"
+  when:
+    - _logs_is_device | bool
+    - not (_logs_has_fs | default(false) | bool)
+    - pve_emmc_optimize_logs_create_fs | bool
+
+- name: Fail if logs disk has no filesystem and auto-create is disabled
+  ansible.builtin.fail:
+    msg: |
+      Logs disk {{ pve_emmc_optimize_logs_disk }} has no filesystem.
+      Set pve_emmc_optimize_logs_create_fs=true to auto-create, or format manually.
+  when:
+    - _logs_is_device | bool
+    - not (_logs_has_fs | default(false) | bool)
+    - not (pve_emmc_optimize_logs_create_fs | bool)
+
+- name: Stop rsyslog service
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: stopped
+
+- name: Create temporary mount point
+  ansible.builtin.file:
+    path: /var/log.new
+    state: directory
+    mode: '0755'
+
+- name: Mount logs disk to temporary location
+  ansible.posix.mount:
+    path: /var/log.new
+    src: "{{ pve_emmc_optimize_logs_disk if _logs_is_device else pve_emmc_optimize_logs_disk }}"
+    fstype: "{{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }}"
+    state: mounted
+    opts: "defaults,noatime,nodiratime"
+
+- name: Sync existing logs to new location
+  ansible.builtin.shell: |
+    rsync -avAXx /var/log/ /var/log.new/
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Backup original /var/log location info
+  ansible.builtin.copy:
+    content: |
+      Original /var/log mount
+      Moved to: {{ pve_emmc_optimize_logs_disk }}
+      Date: {{ ansible_date_time.iso8601 }}
+    dest: "{{ pve_emmc_optimize_backup_dir }}/var-log-original.txt"
+    mode: '0600'
+
+- name: Unmount temporary location
+  ansible.posix.mount:
+    path: /var/log.new
+    state: unmounted
+
+- name: Remove old log files
+  ansible.builtin.shell: |
+    rm -rf /var/log/*
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Mount logs disk to /var/log
+  ansible.posix.mount:
+    path: /var/log
+    src: "{{ pve_emmc_optimize_logs_disk if _logs_is_device else pve_emmc_optimize_logs_disk }}"
+    fstype: "{{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }}"
+    state: mounted
+    opts: "defaults,noatime,nodiratime"
+
+- name: Add logs mount to /etc/fstab
+  ansible.posix.mount:
+    path: /var/log
+    src: "{{ pve_emmc_optimize_logs_disk if _logs_is_device else pve_emmc_optimize_logs_disk }}"
+    fstype: "{{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }}"
+    opts: "defaults,noatime,nodiratime"
+    state: present
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Start rsyslog service
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: started
+
+- name: Remove temporary mount point
+  ansible.builtin.file:
+    path: /var/log.new
+    state: absent
+
+- name: Display log relocation results
+  ansible.builtin.debug:
+    msg: "Logs relocated: /var/log -> {{ pve_emmc_optimize_logs_disk }} ({{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }})"

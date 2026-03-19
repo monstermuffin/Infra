@@ -1,0 +1,31 @@
+---
+pve_emmc_optimize_enabled: false
+
+# "present" = apply, "absent" = revert, "" = skip
+pve_emmc_optimize_state: "present"
+
+pve_emmc_optimize_swap_disable: true
+
+# Log relocation — empty string skips
+pve_emmc_optimize_logs_disk: ""
+pve_emmc_optimize_logs_fstype: "ext4"
+pve_emmc_optimize_logs_create_fs: false
+
+# "timeout" = reduce write frequency, "relocate" = move to external disk, "both"
+pve_emmc_optimize_rrd_mode: "timeout"
+pve_emmc_optimize_rrd_write_timeout: 1800
+pve_emmc_optimize_rrd_disk: ""
+pve_emmc_optimize_rrd_fstype: "ext4"
+pve_emmc_optimize_rrd_create_fs: false
+
+# Adds noatime, nodiratime, commit=N to root filesystem
+pve_emmc_optimize_filesystem_opts: true
+pve_emmc_optimize_commit_interval: 600
+
+pve_emmc_optimize_monitoring: true
+pve_emmc_optimize_warning_threshold: 70
+# Estimated P/E cycles (1000 = TLC default)
+pve_emmc_optimize_pe_cycles: 1000
+
+pve_emmc_optimize_backup_dir: "/root/emmc-optimize-backups"
+pve_emmc_optimize_auto_reboot: false

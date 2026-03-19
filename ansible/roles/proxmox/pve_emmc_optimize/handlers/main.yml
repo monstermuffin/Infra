@@ -1,0 +1,5 @@
+---
+
+- name: Rrdcached restarted
+  ansible.builtin.debug:
+    msg: "rrdcached service has been restarted with new configuration"

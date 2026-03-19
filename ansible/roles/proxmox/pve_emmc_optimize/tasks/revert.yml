@@ -1,0 +1,185 @@
+---
+- name: Check if backup directory exists
+  ansible.builtin.stat:
+    path: "{{ pve_emmc_optimize_backup_dir }}"
+  register: _backup_dir
+
+- name: Fail if no backups found
+  ansible.builtin.fail:
+    msg: "No backup directory at {{ pve_emmc_optimize_backup_dir }}, cannot revert"
+  when: not _backup_dir.stat.exists
+
+- name: Find latest fstab backup
+  ansible.builtin.shell: |
+    set -o pipefail
+    ls -t {{ pve_emmc_optimize_backup_dir }}/fstab* 2>/dev/null | head -1 || echo ""
+  args:
+    executable: /bin/bash
+  register: _fstab_backup
+  changed_when: false
+
+- name: Find latest rrdcached config backup
+  ansible.builtin.shell: |
+    set -o pipefail
+    ls -t {{ pve_emmc_optimize_backup_dir }}/rrdcached.* 2>/dev/null | head -1 || echo ""
+  args:
+    executable: /bin/bash
+  register: _rrdcached_backup
+  changed_when: false
+
+- name: Revert swap configuration
+  when: pve_emmc_optimize_swap_disable | bool
+  block:
+    - name: Detect volume group name
+      ansible.builtin.shell: |
+        set -o pipefail
+        vgs --noheadings -o vg_name | head -1 | tr -d ' '
+      args:
+        executable: /bin/bash
+      register: _vg_name
+      changed_when: false
+
+    - name: Recreate swap logical volume (Proxmox default 8G)
+      ansible.builtin.command: lvcreate -L 8G -n swap {{ _vg_name.stdout }}
+      changed_when: true
+      failed_when: false
+
+    - name: Format swap logical volume
+      ansible.builtin.command: mkswap /dev/{{ _vg_name.stdout }}/swap
+      changed_when: true
+
+    - name: Add swap entry to /etc/fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "/dev/{{ _vg_name.stdout }}/swap none swap sw 0 0"
+        state: present
+
+    - name: Enable swap
+      ansible.builtin.command: swapon -a
+      changed_when: true
+
+    - name: Remove sysctl configuration
+      ansible.builtin.file:
+        path: /etc/sysctl.d/99-emmc-optimize.conf
+        state: absent
+
+    - name: Reload sysctl
+      ansible.builtin.command: sysctl --system
+      changed_when: true
+
+    - name: Display swap revert status
+      ansible.builtin.debug:
+        msg: "Swap restored: /dev/{{ _vg_name.stdout }}/swap (8G)"
+
+- name: Revert log relocation
+  when: pve_emmc_optimize_logs_disk | length > 0
+  block:
+    - name: Check if var-log-original backup exists
+      ansible.builtin.stat:
+        path: "{{ pve_emmc_optimize_backup_dir }}/var-log-original.txt"
+      register: _log_backup_info
+
+    - name: Stop rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: stopped
+      when: _log_backup_info.stat.exists
+
+    - name: Unmount /var/log
+      ansible.posix.mount:
+        path: /var/log
+        state: unmounted
+      when: _log_backup_info.stat.exists
+
+    - name: Remove /var/log from fstab
+      ansible.posix.mount:
+        path: /var/log
+        state: absent
+      when: _log_backup_info.stat.exists
+
+    - name: Display log revert notice
+      ansible.builtin.debug:
+        msg: "Logs reverted to eMMC, old logs remain on {{ pve_emmc_optimize_logs_disk }}"
+      when: _log_backup_info.stat.exists
+
+    - name: Start rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: started
+      when: _log_backup_info.stat.exists
+
+- name: Revert RRD optimization
+  when: pve_emmc_optimize_rrd_mode in ["timeout", "relocate", "both"]
+  block:
+    - name: Restore rrdcached config
+      ansible.builtin.copy:
+        src: "{{ _rrdcached_backup.stdout }}"
+        dest: /etc/default/rrdcached
+        remote_src: true
+        mode: '0644'
+      when: _rrdcached_backup.stdout | length > 0
+
+    - name: Check if RRD database was relocated
+      ansible.builtin.stat:
+        path: "{{ pve_emmc_optimize_backup_dir }}/rrd-db-original.txt"
+      register: _rrd_backup_info
+
+    - name: Revert RRD database relocation
+      when: _rrd_backup_info.stat.exists
+      block:
+        - name: Stop rrdcached
+          ansible.builtin.systemd:
+            name: rrdcached
+            state: stopped
+
+        - name: Unmount /var/lib/rrdcached/db
+          ansible.posix.mount:
+            path: /var/lib/rrdcached/db
+            state: unmounted
+
+        - name: Remove /var/lib/rrdcached/db from fstab
+          ansible.posix.mount:
+            path: /var/lib/rrdcached/db
+            state: absent
+
+        - name: Display RRD revert notice
+          ansible.builtin.debug:
+            msg: "RRD reverted to eMMC, old data remains on {{ pve_emmc_optimize_rrd_disk }}"
+
+    - name: Restart rrdcached
+      ansible.builtin.systemd:
+        name: rrdcached
+        state: restarted
+
+- name: Revert filesystem mount options
+  when: pve_emmc_optimize_filesystem_opts | bool
+  block:
+    - name: Find latest filesystem fstab backup
+      ansible.builtin.shell: |
+        set -o pipefail
+        ls -t {{ pve_emmc_optimize_backup_dir }}/fstab-fs-opts.* 2>/dev/null | head -1 || echo ""
+      args:
+        executable: /bin/bash
+      register: _fstab_fs_backup
+      changed_when: false
+
+    - name: Restore original fstab
+      ansible.builtin.copy:
+        src: "{{ _fstab_fs_backup.stdout }}"
+        dest: /etc/fstab
+        remote_src: true
+        mode: '0644'
+      when: _fstab_fs_backup.stdout | length > 0
+
+    - name: Remount root filesystem with original options
+      ansible.builtin.command: mount -o remount /
+      when: _fstab_fs_backup.stdout | length > 0
+      changed_when: true
+
+- name: Display revert completion message
+  ansible.builtin.debug:
+    msg: >-
+      Revert complete — swap: {{ 'yes' if pve_emmc_optimize_swap_disable else 'no' }},
+      logs: {{ 'yes' if pve_emmc_optimize_logs_disk | length > 0 else 'no' }},
+      rrd: {{ 'yes' if pve_emmc_optimize_rrd_mode in ["timeout", "relocate", "both"] else 'no' }},
+      fs: {{ 'yes' if pve_emmc_optimize_filesystem_opts else 'no' }}
