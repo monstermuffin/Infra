@@ -1,0 +1,18 @@
+---
+# LXC App Config
+proxmox_vmid: 112
+proxmox_node: pve03.aah.muffn.io
+proxmox_os: "Debian 13 (Trixie)"
+proxmox_runtime: "Podman rootful (system Quadlet)"
+
+radarr_enabled: true
+
+radarr_image: ghcr.io/home-operations/radarr
+radarr_image_tag: rolling
+
+radarr_timezone: Europe/London
+radarr_container_port: 7878
+
+radarr_config_dir: /opt/radarr/config
+radarr_movies_dir: /opt/radarr/movies
+radarr_downloads_dir: /opt/radarr/downloads

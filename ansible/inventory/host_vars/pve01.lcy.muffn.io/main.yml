@@ -1,0 +1,8 @@
+---
+pve_system_hostname: pve01
+pve_pocketid_enabled: true
+
+pve_ha_services_enabled: false
+
+# Enable Coral TPU installation
+pve_coral_enabled: false

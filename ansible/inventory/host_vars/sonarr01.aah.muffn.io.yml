@@ -1,0 +1,18 @@
+---
+# LXC App Config
+proxmox_vmid: 111
+proxmox_node: pve03.aah.muffn.io
+proxmox_os: "Debian 13 (Trixie)"
+proxmox_runtime: "Podman rootful (system Quadlet)"
+
+sonarr_enabled: true
+
+sonarr_image: ghcr.io/home-operations/sonarr
+sonarr_image_tag: rolling
+
+sonarr_timezone: Europe/London
+sonarr_container_port: 8989
+
+sonarr_config_dir: /opt/sonarr/config
+sonarr_tv_dir: /opt/sonarr/tv
+sonarr_downloads_dir: /opt/sonarr/downloads

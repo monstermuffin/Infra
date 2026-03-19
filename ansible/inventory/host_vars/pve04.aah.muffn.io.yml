@@ -1,0 +1,13 @@
+---
+pve_system_hostname: pve04
+pve_pocketid_enabled: true
+
+# /etc/hosts — corosync ring IP for FQDN resolution
+pve_system_hosts_ip: "172.29.82.2"
+pve_system_cluster_peers:
+  - ip: "172.29.82.1"
+    fqdn: "pve03.aah.muffn.io"
+    name: "pve03"
+
+# Network configuration
+pve_network_manage: "manual"

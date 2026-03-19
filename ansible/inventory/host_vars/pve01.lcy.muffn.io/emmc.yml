@@ -1,0 +1,16 @@
+---
+
+pve_emmc_optimize_enabled: true
+pve_emmc_optimize_state: "present"
+pve_emmc_optimize_swap_disable: true
+
+pve_emmc_optimize_logs_disk: ""
+pve_emmc_optimize_rrd_mode: "timeout"
+pve_emmc_optimize_rrd_write_timeout: 1800  # 30 minutes
+
+pve_emmc_optimize_filesystem_opts: true
+pve_emmc_optimize_commit_interval: 600  # 10 minutes
+
+pve_emmc_optimize_monitoring: true
+pve_emmc_optimize_warning_threshold: 70
+pve_emmc_optimize_pe_cycles: 1000  # TLC NAND default

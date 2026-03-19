@@ -1,0 +1,36 @@
+---
+# Dynamic inventory: AAH cluster fallback (pve04)
+# Only used when pve03 (lxc.aah_cluster.proxmox.yml) is unreachable.
+
+plugin: community.proxmox.proxmox
+url: https://10.82.2.154:8006
+user: root@pam
+password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61363361663935343338336662303831346338616466306231626165343335353937303931333064
+          6132343639396136353466643664306663663264396661620a656366346632333666323032653432
+          30633330613234643531666639613337343238323235613862623062363163326261643837393665
+          3664323831633866320a306466616164653238653839326232323138663836373033383063313938
+          6662
+validate_certs: false
+
+want_proxmox_nodes_ansible_host: false
+want_facts: true
+type: lxc
+
+compose:
+  ansible_host: proxmox_net0.ip | default('') | regex_replace('/.*', '')
+  ansible_user: root
+
+keyed_groups:
+  - key: proxmox_tags
+    separator: ""
+    prefix: "tag_"
+  - key: proxmox_node
+    prefix: "node_"
+
+filters:
+  - proxmox_tags is search('ansible')
+
+hostnames:
+  - proxmox_name

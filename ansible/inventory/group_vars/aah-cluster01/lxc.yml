@@ -1,0 +1,73 @@
+---
+# LXC defaults cluster wide
+pve_lxc_default_ostemplate: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+pve_lxc_default_storage: "local-zfs"
+pve_lxc_default_network_bridge: "vmbr1"
+
+# LXC container deployment
+# Node for initial placement and does not affect migration after initial placement
+
+pve_lxcs:
+  sonarr:
+    vmid: 111
+    hostname: sonarr.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.111/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_sonarr
+    features:
+      nesting: true
+      keyctl: true
+    ha:
+      enabled: true
+      state: started
+      max_restart: 1
+      max_relocate: 1
+    replication:
+      enabled: true
+      target: pve04
+      schedule: "*/15"
+      # rate: 50
+
+  radarr01:
+    vmid: 112
+    hostname: radarr01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.112/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_radarr
+    features:
+      nesting: true
+      keyctl: true
+    ha:
+      enabled: true
+      state: started
+      max_restart: 1
+      max_relocate: 1
+    replication:
+      enabled: true
+      target: pve04
+      schedule: "*/15"
+      # rate: 50

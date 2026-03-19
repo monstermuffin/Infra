@@ -1,0 +1,92 @@
+---
+# Proxmox Global Vars
+
+# Repo/APT/System config (post install)
+pve_enterprise_repo_enabled: false
+pve_no_subscription_repo_enabled: true
+pve_test_repo_enabled: false
+
+pve_ceph_repo_enabled: false
+pve_ceph_repo_component: quincy
+
+pve_remove_subscription_nag: true
+
+pve_ha_services_enabled: true
+
+pve_run_apt_update: true
+pve_run_apt_upgrade: true
+
+# Kernel management
+
+pve_kernel_pin_version: ""
+pve_kernel_pin_auto_reboot: false
+
+# Kernel cleanup - removes old/unused kernel packages
+# Actions: "list" (show only), "clean" (keep N versions), "clean-all" (remove all old)
+pve_kernel_clean_action: "list"
+pve_kernel_clean_keep_versions: 1
+pve_kernel_clean_autoremove: true
+pve_kernel_clean_update_grub: true
+
+# Microcode
+
+# Microcode action: "check" (status only), "install" (specific version), "latest" (auto-latest)
+pve_microcode_action: "latest"
+# Specific package to install (leave empty for auto-detect latest)
+# Intel: "intel-microcode_3.20231114.1~deb12u1_amd64.deb"
+# AMD: "amd64-microcode_3.20230808.1.1~deb12u1_amd64.deb"
+pve_microcode_package: ""
+pve_microcode_auto_reboot: false
+# Override CPU vendor detection (should probably leave alone)
+pve_microcode_vendor: ""
+
+# CPU scaling governor
+
+# Governor options: performance, powersave, ondemand, conservative, schedutil
+pve_scaling_governor: ""
+# Make governor persistent across reboots (crontab)
+pve_scaling_governor_persistent: false
+# Remove any existing governor persistence
+pve_scaling_governor_remove_persistence: false
+
+# System configuration
+
+pve_system_hostname: ""  # host_vars
+pve_system_domain: "" # group_vars
+
+# Timezone
+pve_system_timezone: "Europe/London"
+
+# Locale
+pve_system_locale: "en_US.UTF-8"
+pve_system_locale_generate:
+  - "en_US.UTF-8 UTF-8"
+
+# SSH configuration
+pve_system_ssh_permit_root_login: "prohibit-password"
+pve_system_ssh_password_authentication: false
+pve_system_ssh_port: 22
+
+pve_system_ssh_import_keys_url: "https://github.com/monstermuffin.keys"
+
+# MOTD
+pve_system_motd_enabled: false
+pve_system_motd_content: ""
+
+pve_pocketid_issuer_url: "https://id.muffn.io"
+pve_pocketid_client_id: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36376331663236613431633939653932356662636335653330303939663463663339633664346136
+          3636376135316363326637323164363633643962663735370a353763646635366330663666623765
+          39643936353161616639363665363661373461353238656438393136333664346366306430346563
+          6665336636376134620a646234326531643266646434386238663065376132616432363933303736
+          38376233363639396637356534356432393964386132613539666630366234333338346433313065
+          6632363433386561643933316634623931643537636433636336
+pve_pocketid_client_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33383662366261343934333765663435393562653333653336656632653665666563303637383464
+          3738376430653534333934633664326630646164636362360a353134336566326634663761316261
+          66656636363435633862306537666538356264343633356365643762383831393937353636386534
+          3366396630323336350a363934633832666632626530346564376564353763303437653638353137
+          37363736653939386662613463373363376533343230326538353462376132653866323139396531
+          3531323834343530643861393566373830623862643039643431
