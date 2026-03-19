@@ -1,0 +1,7 @@
+---
+# Options: performance, powersave, ondemand, conservative, schedutil
+# Empty string = display current governor only
+pve_scaling_governor: ""
+
+pve_scaling_governor_persistent: false
+pve_scaling_governor_remove_persistence: false

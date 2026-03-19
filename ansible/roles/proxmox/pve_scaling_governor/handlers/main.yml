@@ -1,0 +1,4 @@
+---
+- name: Governor changed
+  ansible.builtin.debug:
+    msg: "CPU scaling governor changed. Will revert after reboot unless persistence is enabled."

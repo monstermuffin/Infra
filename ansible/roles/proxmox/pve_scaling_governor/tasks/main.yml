@@ -1,0 +1,107 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_distribution is not defined
+
+- name: Verify running on Proxmox VE
+  ansible.builtin.fail:
+    msg: "This role is designed for Proxmox VE systems only"
+  when: >
+    ansible_distribution != "Debian" or
+    not (ansible_distribution_release in ["bullseye", "bookworm", "trixie"])
+  tags:
+    - always
+
+- name: Check if cpufreq driver is loaded
+  ansible.builtin.stat:
+    path: /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+  register: cpufreq_available
+  tags:
+    - always
+
+- name: Fail if cpufreq is not available
+  ansible.builtin.fail:
+    msg: "CPU frequency scaling is not available on this system. The cpufreq driver may not be loaded."
+  when: not cpufreq_available.stat.exists
+  tags:
+    - always
+
+- name: Get current scaling governor
+  ansible.builtin.slurp:
+    src: /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+  register: current_governor_raw
+  tags:
+    - always
+
+- name: Set current governor fact
+  ansible.builtin.set_fact:
+    current_governor: "{{ current_governor_raw['content'] | b64decode | trim }}"
+  tags:
+    - always
+
+- name: Get available scaling governors
+  ansible.builtin.slurp:
+    src: /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+  register: available_governors_raw
+  tags:
+    - always
+
+- name: Set available governors fact
+  ansible.builtin.set_fact:
+    available_governors: "{{ available_governors_raw['content'] | b64decode | trim | split(' ') }}"
+  tags:
+    - always
+
+- name: Display governor information
+  ansible.builtin.debug:
+    msg:
+      - "Current CPU scaling governor: {{ current_governor }}"
+      - "Available governors: {{ available_governors | join(', ') }}"
+  tags:
+    - always
+
+- name: Verify requested governor is available
+  ansible.builtin.fail:
+    msg: "Governor '{{ pve_scaling_governor }}' is not available. Available: {{ available_governors | join(', ') }}"
+  when:
+    - pve_scaling_governor != ""
+    - pve_scaling_governor not in available_governors
+  tags:
+    - set
+
+- name: Set CPU scaling governor
+  ansible.builtin.copy:
+    content: "{{ pve_scaling_governor }}\n"
+    dest: "/sys/devices/system/cpu/cpu{{ item }}/cpufreq/scaling_governor"
+    mode: "0644"
+  loop: "{{ range(0, ansible_processor_vcpus) | list }}"
+  when:
+    - pve_scaling_governor != ""
+    - pve_scaling_governor != current_governor
+  notify: Governor changed
+  tags:
+    - set
+
+- name: Remove governor persistence from crontab
+  ansible.builtin.cron:
+    name: "Set CPU scaling governor"
+    state: absent
+  when: pve_scaling_governor_remove_persistence | bool
+  tags:
+    - persistence
+    - remove
+
+# sleep 60 gives systemd time to finish initialising cpufreq on boot
+- name: Make governor setting persistent across reboots
+  ansible.builtin.cron:
+    name: "Set CPU scaling governor"
+    special_time: reboot
+    job: "sleep 60 && echo '{{ pve_scaling_governor }}' | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null"
+    state: present
+  when:
+    - pve_scaling_governor_persistent | bool
+    - pve_scaling_governor != ""
+    - not pve_scaling_governor_remove_persistence | bool
+  tags:
+    - persistence
+    - set
