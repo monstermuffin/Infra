@@ -1,0 +1,10 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  notify: Restart radarr
+
+- name: Restart radarr
+  ansible.builtin.systemd:
+    name: "{{ radarr_service_name }}.service"
+    state: restarted

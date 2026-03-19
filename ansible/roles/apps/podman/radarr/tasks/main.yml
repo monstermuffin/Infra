@@ -1,0 +1,36 @@
+---
+- name: Preflight checks
+  ansible.builtin.fail:
+    msg: >
+      Radarr role is not enabled. Set 'radarr_enabled: true'
+      in host_vars to enable deployment.
+  when: not radarr_enabled
+  tags: always
+
+- name: Display deployment information
+  ansible.builtin.debug:
+    msg:
+      - "Deploying Radarr (rootful Podman + system Quadlet)"
+      - "Image: {{ radarr_image }}:{{ radarr_image_tag }}"
+      - "Port: {{ radarr_web_port }}"
+  tags: always
+
+- name: Deploy Radarr container
+  ansible.builtin.import_tasks: deploy.yml
+  tags:
+    - deploy
+    - radarr
+    - podman
+
+- name: Manage Radarr service
+  ansible.builtin.import_tasks: service.yml
+  tags:
+    - service
+    - radarr
+    - podman
+
+- name: Update Proxmox container note
+  ansible.builtin.include_tasks: note.yml
+  tags:
+    - note
+    - radarr

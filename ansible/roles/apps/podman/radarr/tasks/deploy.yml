@@ -1,0 +1,30 @@
+---
+- name: Create Radarr directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ radarr_container_uid }}"
+    group: "{{ radarr_container_gid }}"
+    mode: '0755'
+  loop:
+    - "{{ radarr_config_dir }}"
+    - "{{ radarr_movies_dir }}"
+    - "{{ radarr_downloads_dir }}"
+  notify: Restart radarr
+
+- name: Pull Radarr image
+  ansible.builtin.command:
+    cmd: podman pull {{ radarr_image }}:{{ radarr_image_tag }}
+  register: radarr_pull_result
+  changed_when: "'Writing manifest' in radarr_pull_result.stderr"
+  notify: Restart radarr
+
+- name: Deploy Radarr Quadlet file
+  ansible.builtin.template:
+    src: radarr.container.j2
+    dest: /etc/containers/systemd/{{ radarr_service_name }}.container
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Reload systemd if Quadlet changed
+  ansible.builtin.meta: flush_handlers
