@@ -1,0 +1,31 @@
+---
+pve_lxcs: {}
+
+pve_api_host: "{{ ansible_host }}"
+pve_api_user: "root@pam"
+pve_api_password: ""
+pve_api_token_id: ""
+pve_api_token_secret: ""
+pve_api_validate_certs: false
+
+pve_lxc_default_ostemplate: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+pve_lxc_default_storage: "local-zfs"
+pve_lxc_default_disk: "16G"
+pve_lxc_default_cores: 2
+pve_lxc_default_memory: 2048
+pve_lxc_default_swap: 512
+pve_lxc_default_unprivileged: true
+pve_lxc_default_onboot: true
+pve_lxc_default_nameserver: ""
+pve_lxc_default_searchdomain: ""
+pve_lxc_default_network_bridge: "vmbr0"
+
+pve_lxc_ssh_public_keys: ""
+pve_lxc_ssh_github_user: "monstermuffin"
+
+pve_lxc_ha_default_max_restart: 1
+pve_lxc_ha_default_max_relocate: 1
+pve_lxc_ha_default_state: "started"
+
+pve_lxc_replication_default_schedule: "*/15"
+pve_lxc_replication_default_rate: ""

@@ -1,0 +1,71 @@
+---
+- name: Validate pve_lxcs is defined and not empty
+  ansible.builtin.assert:
+    that:
+      - pve_lxcs is defined
+      - pve_lxcs | length > 0
+    fail_msg: "pve_lxcs is not defined or empty — nothing to provision"
+  tags:
+    - always
+
+- name: Fetch SSH keys from GitHub
+  ansible.builtin.uri:
+    url: "https://github.com/{{ pve_lxc_ssh_github_user }}.keys"
+    return_content: true
+  register: _github_keys
+  when: pve_lxc_ssh_public_keys == ""
+  delegate_to: localhost
+  become: false
+  run_once: true
+  tags:
+    - provision
+    - create
+
+- name: Set SSH public keys fact
+  ansible.builtin.set_fact:
+    _ssh_keys: "{{ pve_lxc_ssh_public_keys | default(_github_keys.content | default(''), true) }}"
+  run_once: true
+  tags:
+    - provision
+    - create
+
+- name: Write SSH public keys to host
+  become: true
+  ansible.builtin.copy:
+    content: "{{ _ssh_keys }}"
+    dest: /tmp/ansible_lxc_ssh_keys.pub
+    mode: "0644"
+  run_once: true
+  tags:
+    - provision
+    - create
+
+- name: Include LXC provisioning tasks
+  ansible.builtin.include_tasks: provision_lxc.yml
+  loop: "{{ pve_lxcs | dict2items }}"
+  loop_control:
+    loop_var: lxc_item
+    label: "{{ lxc_item.key }} (VMID {{ lxc_item.value.vmid }})"
+  tags:
+    - provision
+    - create
+
+- name: Include HA configuration tasks
+  ansible.builtin.include_tasks: configure_ha.yml
+  loop: "{{ pve_lxcs | dict2items | selectattr('value.ha.enabled', 'defined') | selectattr('value.ha.enabled') | list }}"
+  loop_control:
+    loop_var: lxc_item
+    label: "{{ lxc_item.key }} (VMID {{ lxc_item.value.vmid }})"
+  tags:
+    - provision
+    - ha
+
+- name: Include replication configuration tasks
+  ansible.builtin.include_tasks: configure_replication.yml
+  loop: "{{ pve_lxcs | dict2items | selectattr('value.replication.enabled', 'defined') | selectattr('value.replication.enabled') | list }}"
+  loop_control:
+    loop_var: lxc_item
+    label: "{{ lxc_item.key }} (VMID {{ lxc_item.value.vmid }})"
+  tags:
+    - provision
+    - replication

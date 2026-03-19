@@ -1,0 +1,145 @@
+---
+# Uses pct CLI instead of community.proxmox module — feature flags, mounts,
+# and cross-node API proxying all require root@pam; pct avoids this.
+
+- name: "Set container facts — {{ lxc_item.key }}"
+  ansible.builtin.set_fact:
+    _lxc: "{{ lxc_item.value }}"
+    _lxc_name: "{{ lxc_item.key }}"
+
+- name: "Check if container already exists in cluster — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: pvesh get /cluster/resources --type vm --output-format json
+  register: _cluster_resources
+  changed_when: false
+
+- name: "Determine current container location — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_existing: >-
+      {{
+        (_cluster_resources.stdout | from_json)
+        | selectattr('type', 'equalto', 'lxc')
+        | selectattr('vmid', 'equalto', (_lxc.vmid | int))
+        | list
+      }}
+
+- name: "Set target node fact — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_current_node: "{{ _lxc_existing[0].node if (_lxc_existing | length) > 0 else _lxc.node }}"
+    _lxc_exists: "{{ (_lxc_existing | length) > 0 }}"
+
+- name: "Set delegate host for container operations — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_delegate_host: "{{ _lxc_current_node }}.{{ pve_cluster_domain }}"
+
+- name: "Build features string — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_features: >-
+      nesting={{ '1' if _lxc.features.nesting | default(true) else '0'
+      }}{{- ',keyctl=1' if _lxc.features.keyctl | default(false) else ''
+      }}{{- ',fuse=1' if _lxc.features.fuse | default(false) else '' }}
+
+- name: "Ensure SSH keys exist on target node — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.copy:
+    content: "{{ _ssh_keys }}"
+    dest: /tmp/ansible_lxc_ssh_keys.pub
+    mode: "0644"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when:
+    - not _lxc_exists
+    - _lxc_delegate_host != inventory_hostname
+
+- name: "Create LXC container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pct create {{ _lxc.vmid }}
+      {{ _lxc.ostemplate | default(pve_lxc_default_ostemplate) }}
+      --hostname {{ _lxc.hostname }}
+      --storage {{ _lxc.storage | default(pve_lxc_default_storage) }}
+      --rootfs {{ _lxc.storage | default(pve_lxc_default_storage) }}:{{
+        _lxc.disk | default(pve_lxc_default_disk) | regex_replace('[^0-9]', '') }}
+      --cores {{ _lxc.cores | default(pve_lxc_default_cores) }}
+      --memory {{ _lxc.memory | default(pve_lxc_default_memory) }}
+      --swap {{ _lxc.swap | default(pve_lxc_default_swap) }}
+      --unprivileged {{ '1' if _lxc.unprivileged | default(pve_lxc_default_unprivileged) else '0' }}
+      --onboot {{ '1' if _lxc.onboot | default(pve_lxc_default_onboot) else '0' }}
+      --net0 name=eth0,bridge={{
+        _lxc.network_bridge | default(pve_lxc_default_network_bridge)
+      }},ip={{ _lxc.network_ip }},gw={{ _lxc.network_gw }}{{
+        ',tag=' ~ _lxc.network_vlan if _lxc.network_vlan is defined else '' }}
+      --features {{ _lxc_features | trim }}
+      {{ '--nameserver ' ~ _lxc.nameserver if _lxc.nameserver is defined else '' }}
+      {{ '--searchdomain ' ~ _lxc.searchdomain if _lxc.searchdomain is defined else '' }}
+      --ssh-public-keys /tmp/ansible_lxc_ssh_keys.pub
+      {{ '--tags ' ~ (_lxc.tags | join(';')) if _lxc.tags is defined else '' }}
+      {% for mp_key, mp_val in (_lxc.mounts | default({})).items() %}
+      --{{ mp_key }} {{ mp_val }}
+      {% endfor %}
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when: not _lxc_exists
+  register: _lxc_create
+  changed_when: _lxc_create is not skipped
+
+- name: "Read current container config — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh get /nodes/{{ _lxc_current_node }}/lxc/{{ _lxc.vmid }}/config --output-format json"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_current_config_raw
+  changed_when: false
+  when: _lxc_exists
+
+- name: "Determine if container specs need updating — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_needs_update: >-
+      {{
+        _lxc_exists and (
+          (_lxc_cfg.hostname | default('')) != _lxc.hostname or
+          (_lxc_cfg.cores | default(0) | int) != (_lxc.cores | default(pve_lxc_default_cores) | int) or
+          (_lxc_cfg.memory | default(0) | int) != (_lxc.memory | default(pve_lxc_default_memory) | int) or
+          (_lxc_cfg.swap | default(0) | int) != (_lxc.swap | default(pve_lxc_default_swap) | int) or
+          (_lxc_cfg.onboot | default(0) | int) != (1 if _lxc.onboot | default(pve_lxc_default_onboot) else 0) or
+          (_lxc_cfg.features | default('')) != (_lxc_features | trim) or
+          ((_lxc_cfg.tags | default('')).split(';') | sort) != ((_lxc.tags | default([]) | join(';')).split(';') | sort)
+        )
+      }}
+  vars:
+    _lxc_cfg: "{{ (_lxc_current_config_raw.stdout | default('{}')) | from_json }}"
+  when: _lxc_exists
+
+- name: "Update existing LXC container specs — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pct set {{ _lxc.vmid }}
+      --hostname {{ _lxc.hostname }}
+      --cores {{ _lxc.cores | default(pve_lxc_default_cores) }}
+      --memory {{ _lxc.memory | default(pve_lxc_default_memory) }}
+      --swap {{ _lxc.swap | default(pve_lxc_default_swap) }}
+      --onboot {{ '1' if _lxc.onboot | default(pve_lxc_default_onboot) else '0' }}
+      --features {{ _lxc_features | trim }}
+      {{ '--tags ' ~ (_lxc.tags | join(';')) if _lxc.tags is defined else '' }}
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when: _lxc_exists and (_lxc_needs_update | default(false) | bool)
+  register: _lxc_update
+  changed_when: _lxc_update is not skipped
+
+- name: "Start container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct start {{ _lxc.vmid }}"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_start
+  changed_when: _lxc_start.rc == 0
+  failed_when: _lxc_start.rc != 0 and 'already running' not in (_lxc_start.stderr | default(''))
+  when: _lxc.start | default(true)
+
+- name: "Display provisioning result — {{ _lxc_name }}"
+  ansible.builtin.debug:
+    msg: >-
+      Container {{ _lxc_name }} (VMID {{ _lxc.vmid }}) —
+      {{ 'created' if not _lxc_exists else 'updated' }}
+      on node {{ _lxc_current_node }}

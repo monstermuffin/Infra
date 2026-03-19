@@ -1,0 +1,45 @@
+---
+- name: "Set HA facts — {{ lxc_item.key }}"
+  ansible.builtin.set_fact:
+    _ha_lxc: "{{ lxc_item.value }}"
+    _ha_name: "{{ lxc_item.key }}"
+
+- name: "Check if HA resource exists — {{ _ha_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh get /cluster/ha/resources/ct:{{ _ha_lxc.vmid }} --output-format json"
+  register: _ha_check
+  changed_when: false
+  failed_when: false
+
+- name: "Add container to HA — {{ _ha_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pvesh create /cluster/ha/resources
+      --sid ct:{{ _ha_lxc.vmid }}
+      --state {{ _ha_lxc.ha.state | default(pve_lxc_ha_default_state) }}
+      --max_restart {{ _ha_lxc.ha.max_restart | default(pve_lxc_ha_default_max_restart) }}
+      --max_relocate {{ _ha_lxc.ha.max_relocate | default(pve_lxc_ha_default_max_relocate) }}
+      --comment "Ansible-managed: {{ _ha_name }}"
+  when: _ha_check.rc != 0
+  register: _ha_create
+  changed_when: _ha_create is not skipped
+
+- name: "Update HA resource — {{ _ha_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pvesh set /cluster/ha/resources/ct:{{ _ha_lxc.vmid }}
+      --state {{ _ha_lxc.ha.state | default(pve_lxc_ha_default_state) }}
+      --max_restart {{ _ha_lxc.ha.max_restart | default(pve_lxc_ha_default_max_restart) }}
+      --max_relocate {{ _ha_lxc.ha.max_relocate | default(pve_lxc_ha_default_max_relocate) }}
+      --comment "Ansible-managed: {{ _ha_name }}"
+  when: _ha_check.rc == 0
+  changed_when: false
+
+- name: "Display HA result — {{ _ha_name }}"
+  ansible.builtin.debug:
+    msg: >-
+      HA for {{ _ha_name }} (ct:{{ _ha_lxc.vmid }}) —
+      {{ 'created' if _ha_check.rc != 0 else 'already configured (updated)' }}

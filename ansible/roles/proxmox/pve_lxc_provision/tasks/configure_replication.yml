@@ -1,0 +1,58 @@
+---
+# Uses pvesr CLI — no Ansible module exists for PVE replication.
+
+- name: "Set replication facts — {{ lxc_item.key }}"
+  ansible.builtin.set_fact:
+    _repl_lxc: "{{ lxc_item.value }}"
+    _repl_name: "{{ lxc_item.key }}"
+    _repl_job_id: "{{ lxc_item.value.vmid }}-0"
+
+- name: "Check if replication job exists — {{ _repl_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: pvesr list
+  register: _repl_list
+  changed_when: false
+
+- name: "Parse existing replication jobs — {{ _repl_name }}"
+  ansible.builtin.set_fact:
+    _repl_exists: "{{ _repl_job_id in _repl_list.stdout }}"
+
+- name: "Create replication job — {{ _repl_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pvesr create-local-job {{ _repl_job_id }}
+      {{ _repl_lxc.replication.target }}
+      --schedule "{{ _repl_lxc.replication.schedule | default(pve_lxc_replication_default_schedule) }}"
+      {{ '--rate ' ~ _repl_lxc.replication.rate if _repl_lxc.replication.rate is defined else '' }}
+      --comment "Ansible-managed: {{ _repl_name }}"
+  when: not _repl_exists
+  register: _repl_create
+  changed_when: _repl_create is not skipped
+
+- name: "Update replication job — {{ _repl_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pvesr update {{ _repl_job_id }}
+      --schedule "{{ _repl_lxc.replication.schedule | default(pve_lxc_replication_default_schedule) }}"
+      {{ '--rate ' ~ _repl_lxc.replication.rate if _repl_lxc.replication.rate is defined else '' }}
+  when: _repl_exists
+  changed_when: false
+
+- name: "Get current replication job details — {{ _repl_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh get /cluster/replication/{{ _repl_job_id }} --output-format json"
+  register: _repl_info
+  changed_when: false
+  when: _repl_exists or (_repl_create is defined and _repl_create is not skipped)
+
+- name: "Display replication result — {{ _repl_name }}"
+  ansible.builtin.debug:
+    msg: >-
+      Replication for {{ _repl_name }} ({{ _repl_job_id }}) →
+      {{ (_repl_info.stdout | from_json).target | default('unknown') }} —
+      {{ 'created' if not _repl_exists else 'already configured' }}
+  when: _repl_info is not skipped
