@@ -1,0 +1,20 @@
+---
+
+- name: Preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+
+- name: Install Podman
+  ansible.builtin.import_tasks: install.yml
+  tags:
+    - install
+    - podman
+    - packages
+
+- name: Create application user
+  ansible.builtin.import_tasks: configure_user.yml
+  when: podman_user is defined
+  tags:
+    - user
+    - setup
+    - configure

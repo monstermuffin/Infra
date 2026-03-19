@@ -1,0 +1,49 @@
+---
+
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  tags: packages
+
+- name: Install Podman packages
+  ansible.builtin.apt:
+    name: "{{ podman_packages }}"
+    state: present
+  tags: packages
+
+- name: Create containers config directory
+  ansible.builtin.file:
+    path: /etc/containers
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Configure container registries
+  ansible.builtin.template:
+    src: registries.conf.j2
+    dest: /etc/containers/registries.conf
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Create systemd Quadlet directory
+  ansible.builtin.file:
+    path: /etc/containers/systemd
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Verify Podman installation
+  ansible.builtin.command:
+    cmd: podman --version
+  register: podman_version_output
+  changed_when: false
+  tags: verify
+
+- name: Display Podman version
+  ansible.builtin.debug:
+    msg: "Podman installed: {{ podman_version_output.stdout }}"
+  tags: verify

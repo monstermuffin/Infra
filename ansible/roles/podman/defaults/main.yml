@@ -1,0 +1,20 @@
+---
+podman_enabled: false
+
+# Podman packages to install
+podman_packages:
+  - podman
+  - podman-compose
+  - crun
+
+# Container registries
+podman_registries:
+  - docker.io
+  - ghcr.io
+
+# Registries configuration
+podman_registries_insecure: []
+podman_registries_blocked: []
+
+podman_user_shell: /bin/bash
+podman_user_system: true

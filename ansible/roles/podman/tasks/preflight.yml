@@ -1,0 +1,36 @@
+---
+
+- name: Check if role is enabled
+  ansible.builtin.fail:
+    msg: >
+      Podman role is not enabled. Set 'podman_enabled: true'
+      in host_vars to enable deployment.
+  when: not podman_enabled
+  tags: always
+
+- name: Gather facts if not already present
+  ansible.builtin.setup:
+  when: ansible_os_family is not defined
+  tags: always
+
+- name: Validate podman user configuration
+  ansible.builtin.assert:
+    that:
+      - podman_user_home is defined
+      - podman_user_home | length > 0
+    fail_msg: "Set 'podman_user_home' when configuring 'podman_user'."
+  when: podman_user is defined
+  tags: always
+
+- name: Validate OS family
+  ansible.builtin.fail:
+    msg: "This role only supports Debian-based systems. Found: {{ ansible_os_family }}"
+  when: ansible_os_family != 'Debian'
+  tags: always
+
+- name: Display deployment information
+  ansible.builtin.debug:
+    msg:
+      - "Installing Podman (rootful)"
+      - "App user: {{ podman_user | default('none — running as root only') }}"
+  tags: always

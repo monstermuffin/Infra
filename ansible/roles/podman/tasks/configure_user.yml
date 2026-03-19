@@ -1,0 +1,18 @@
+---
+
+- name: Create application user
+  ansible.builtin.user:
+    name: "{{ podman_user }}"
+    home: "{{ podman_user_home }}"
+    shell: "{{ podman_user_shell }}"
+    system: "{{ podman_user_system }}"
+    create_home: true
+    state: present
+
+- name: Ensure home directory has correct permissions
+  ansible.builtin.file:
+    path: "{{ podman_user_home }}"
+    state: directory
+    owner: "{{ podman_user }}"
+    group: "{{ podman_user }}"
+    mode: '0755'

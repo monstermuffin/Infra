@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# Container registries configuration for Podman
+# Location: /etc/containers/registries.conf
+
+# Default registries to search for images
+unqualified-search-registries = {{ podman_registries | to_json }}
+
+{% if podman_registries_insecure | length > 0 %}
+# Insecure registries (no TLS verification)
+{% for registry in podman_registries_insecure %}
+[[registry]]
+location = "{{ registry }}"
+insecure = true
+{% endfor %}
+{% endif %}
+
+{% if podman_registries_blocked | length > 0 %}
+# Blocked registries
+{% for registry in podman_registries_blocked %}
+[[registry]]
+location = "{{ registry }}"
+blocked = true
+{% endfor %}
+{% endif %}
+
+# Docker Hub configuration
+[[registry]]
+location = "docker.io"
