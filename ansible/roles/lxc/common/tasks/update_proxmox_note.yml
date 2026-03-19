@@ -1,0 +1,22 @@
+---
+# Set the Proxmox LXC container description (note) with app-specific info.
+#
+# Required vars:
+#   lxc_note_vmid:        VMID of the container
+#   lxc_note_node:        Proxmox node FQDN to delegate pct commands
+#   lxc_note_content:     Full note content
+
+- name: "LXC note | Write note to temp file on node"
+  become: true
+  ansible.builtin.copy:
+    content: "{{ lxc_note_content }}"
+    dest: "/tmp/ansible_lxc_{{ lxc_note_vmid }}_note.txt"
+    mode: "0600"
+  delegate_to: "{{ lxc_note_node }}"
+
+- name: "LXC note | Set container description in Proxmox"
+  become: true
+  ansible.builtin.shell: |
+    pct set {{ lxc_note_vmid }} --description "$(cat /tmp/ansible_lxc_{{ lxc_note_vmid }}_note.txt)"
+  delegate_to: "{{ lxc_note_node }}"
+  changed_when: true
