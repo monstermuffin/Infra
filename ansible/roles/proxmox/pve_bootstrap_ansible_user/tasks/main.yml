@@ -1,0 +1,64 @@
+---
+
+- name: Gather facts
+  ansible.builtin.setup:
+
+- name: Create ansible user
+  ansible.builtin.user:
+    name: "{{ ansible_user_name }}"
+    state: present
+    shell: /bin/bash
+    create_home: true
+    groups: "{{ ansible_user_groups }}"
+    append: true
+  tags:
+    - user
+
+- name: Set up SSH key for ansible user
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user_name }}"
+    state: present
+    key: "{{ ansible_ssh_public_key }}"
+    exclusive: false
+  tags:
+    - ssh
+
+- name: Disable enterprise repos (prevents APT update failures)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/pve-enterprise.list
+    - /etc/apt/sources.list.d/ceph.list
+    - /etc/apt/sources.list.d/pve-enterprise.sources
+    - /etc/apt/sources.list.d/ceph.sources
+  failed_when: false
+  tags:
+    - repos
+
+- name: Ensure sudo is installed
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+    update_cache: true
+  tags:
+    - sudo
+
+- name: Configure passwordless sudo for ansible user
+  ansible.builtin.copy:
+    content: |
+      # Ansible automation user
+      {{ ansible_user_name }} ALL=(ALL) NOPASSWD: ALL
+    dest: "/etc/sudoers.d/{{ ansible_user_name }}"
+    mode: '0440'
+    validate: '/usr/sbin/visudo -cf %s'
+  tags:
+    - sudo
+
+- name: Verify ansible user can sudo
+  ansible.builtin.command: sudo -n true
+  become: true
+  become_user: "{{ ansible_user_name }}"
+  changed_when: false
+  tags:
+    - verify

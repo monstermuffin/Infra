@@ -1,0 +1,9 @@
+---
+
+ansible_user_name: ansible
+
+ansible_user_groups:
+  - sudo
+
+ansible_ssh_github_user: "monstermuffin"
+ansible_ssh_public_key: "https://github.com/{{ ansible_ssh_github_user }}.keys"
