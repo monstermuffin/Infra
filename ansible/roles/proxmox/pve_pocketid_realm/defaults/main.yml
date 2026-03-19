@@ -1,0 +1,40 @@
+---
+# Must be explicitly enabled per host
+pve_pocketid_enabled: false
+
+# "present" (configure), "absent" (remove), or "" (skip)
+pve_pocketid_state: "present"
+
+pve_pocketid_realm_id: "pocketid"
+pve_pocketid_realm_comment: "Pocket ID OIDC Authentication"
+pve_pocketid_default: false
+
+# OIDC provider settings
+pve_pocketid_issuer_url: ""
+pve_pocketid_client_id: ""
+pve_pocketid_client_secret: ""
+pve_pocketid_scopes: "openid profile email groups"
+pve_pocketid_username_claim: "username"
+
+pve_pocketid_autocreate: true
+
+# Group sync
+pve_pocketid_sync_groups: true
+pve_pocketid_groups_claim: "groups"
+pve_pocketid_autocreate_groups: true
+
+# Proxmox group management
+pve_pocketid_manage_groups: true
+
+# Proxmox appends the realm ID as a suffix to synced groups
+# e.g. proxmox_admins -> proxmox_admins-pocketid
+pve_pocketid_groups:
+  - name: "proxmox_admins-pocketid"
+    comment: "Administrators from Pocket ID"
+    acl:
+      - path: "/"
+        role: "Administrator"
+        propagate: true
+
+# Additional OIDC properties (e.g. ["prompt=login", "acr-values=gold"])
+pve_pocketid_extra_properties: []

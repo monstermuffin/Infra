@@ -1,0 +1,43 @@
+---
+- name: Get list of configured realms
+  ansible.builtin.command: pveum realm list --output-format json
+  register: realm_list_output
+  changed_when: false
+  failed_when: false
+
+- name: Parse realm list
+  ansible.builtin.set_fact:
+    configured_realms: "{{ realm_list_output.stdout | from_json if realm_list_output.rc == 0 else [] }}"
+
+- name: Check if Pocket ID realm exists
+  ansible.builtin.set_fact:
+    pocketid_realm_exists: "{{ configured_realms | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list | length > 0 }}"
+
+- name: Get Pocket ID realm details
+  ansible.builtin.command: pveum realm list --output-format json
+  register: realm_details_raw
+  changed_when: false
+  failed_when: false
+  when: pocketid_realm_exists | bool
+
+- name: Parse realm details
+  ansible.builtin.set_fact:
+    pocketid_realm_info: "{{ (realm_details_raw.stdout | from_json | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list)[0] }}"
+  when:
+    - pocketid_realm_exists | bool
+    - realm_details_raw.rc == 0
+
+- name: Display Pocket ID realm status
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Pocket ID Realm Status"
+      - "=========================================="
+      - "Enabled: {{ pve_pocketid_enabled }}"
+      - "Desired state: {{ pve_pocketid_state }}"
+      - "Realm ID: {{ pve_pocketid_realm_id }}"
+      - "Realm exists: {{ pocketid_realm_exists }}"
+      - "{{ 'Realm type: ' + pocketid_realm_info.type if pocketid_realm_exists else 'Not configured' }}"
+      - "{{ 'Comment: ' + pocketid_realm_info.comment | default('None') if pocketid_realm_exists else '' }}"
+      - "{{ 'Default: ' + (pocketid_realm_info.default | default(false) | string) if pocketid_realm_exists else '' }}"
+      - "=========================================="

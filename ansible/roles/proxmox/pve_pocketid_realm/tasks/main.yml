@@ -1,0 +1,43 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_distribution is not defined
+  tags:
+    - always
+
+- name: Include validation tasks
+  ansible.builtin.include_tasks: validate.yml
+  tags:
+    - always
+
+- name: Include info tasks
+  ansible.builtin.include_tasks: info.yml
+  tags:
+    - info
+    - status
+
+- name: Configure Pocket ID realm
+  when:
+    - pve_pocketid_enabled | bool
+    - pve_pocketid_state | default('') | length > 0
+    - pve_pocketid_state == "present"
+  tags:
+    - configure
+    - setup
+    - present
+  block:
+    - name: Include configuration tasks
+      ansible.builtin.include_tasks: configure.yml
+
+- name: Remove Pocket ID realm
+  when:
+    - pve_pocketid_enabled | bool
+    - pve_pocketid_state | default('') | length > 0
+    - pve_pocketid_state == "absent"
+  tags:
+    - remove
+    - absent
+    - revert
+  block:
+    - name: Include removal tasks
+      ansible.builtin.include_tasks: revert.yml

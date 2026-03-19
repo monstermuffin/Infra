@@ -1,0 +1,44 @@
+---
+- name: Check if Pocket ID realm exists
+  ansible.builtin.command: pveum realm list --output-format json
+  register: realm_check
+  changed_when: false
+
+- name: Parse realm list
+  ansible.builtin.set_fact:
+    realm_exists: "{{ (realm_check.stdout | from_json | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list | length > 0) }}"
+
+- name: Display message if realm doesn't exist
+  ansible.builtin.debug:
+    msg: "Pocket ID realm '{{ pve_pocketid_realm_id }}' does not exist, nothing to remove"
+  when: not realm_exists
+
+- name: Remove Pocket ID realm
+  ansible.builtin.command: pveum realm delete {{ pve_pocketid_realm_id }}
+  when: realm_exists
+  changed_when: true
+
+- name: Verify realm removal
+  ansible.builtin.command: pveum realm list --output-format json
+  register: realm_verify
+  changed_when: false
+  when: realm_exists
+
+- name: Confirm realm removed
+  ansible.builtin.set_fact:
+    realm_still_exists: "{{ (realm_verify.stdout | from_json | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list | length > 0) }}"
+  when: realm_exists
+
+- name: Display removal result
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Pocket ID Realm Removed"
+      - "=========================================="
+      - "Realm ID: {{ pve_pocketid_realm_id }}"
+      - "Status: {{ 'Successfully removed' if not realm_still_exists | default(true) else 'ERROR: Still exists!' }}"
+      - "=========================================="
+      - ""
+      - "WARNING: Users authenticated via this realm will no longer be able to log in."
+      - "Consider reassigning or removing affected users if necessary."
+  when: realm_exists

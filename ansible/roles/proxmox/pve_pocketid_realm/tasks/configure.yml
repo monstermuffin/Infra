@@ -1,0 +1,108 @@
+---
+- name: Check if Pocket ID realm already exists
+  ansible.builtin.command: pveum realm list --output-format json
+  register: existing_realms_check
+  changed_when: false
+
+- name: Parse existing realms
+  ansible.builtin.set_fact:
+    realm_exists: "{{ (existing_realms_check.stdout | from_json | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list | length > 0) }}"
+
+- name: Build realm creation parameters (add)
+  ansible.builtin.set_fact:
+    realm_add_params:
+      - "--type openid"
+      - "--issuer-url {{ pve_pocketid_issuer_url }}"
+      - "--client-id {{ pve_pocketid_client_id }}"
+      - "--client-key {{ pve_pocketid_client_secret }}"
+      - "--scopes '{{ pve_pocketid_scopes }}'"
+      - "--username-claim {{ pve_pocketid_username_claim }}"
+      - "{{ '--autocreate 1' if pve_pocketid_autocreate else '--autocreate 0' }}"
+      - "{{ '--groups-autocreate 1' if pve_pocketid_autocreate_groups else '' }}"
+      - "{{ '--groups-claim ' + pve_pocketid_groups_claim if pve_pocketid_sync_groups and pve_pocketid_groups_claim | length > 0 else '' }}"
+      - "{{ '--default 1' if pve_pocketid_default else '' }}"
+      - "{{ '--comment \"' + pve_pocketid_realm_comment + '\"' if pve_pocketid_realm_comment | length > 0 else '' }}"
+  when: not realm_exists
+
+- name: Build realm modification parameters (modify)
+  ansible.builtin.set_fact:
+    realm_modify_params:
+      - "--issuer-url {{ pve_pocketid_issuer_url }}"
+      - "--client-id {{ pve_pocketid_client_id }}"
+      - "--client-key {{ pve_pocketid_client_secret }}"
+      - "--scopes '{{ pve_pocketid_scopes }}'"
+      - "{{ '--autocreate 1' if pve_pocketid_autocreate else '--autocreate 0' }}"
+      - "{{ '--groups-autocreate 1' if pve_pocketid_autocreate_groups else '' }}"
+      - "{{ '--groups-claim ' + pve_pocketid_groups_claim if pve_pocketid_sync_groups and pve_pocketid_groups_claim | length > 0 else '' }}"
+      - "{{ '--default 1' if pve_pocketid_default else '' }}"
+      - "{{ '--comment \"' + pve_pocketid_realm_comment + '\"' if pve_pocketid_realm_comment | length > 0 else '' }}"
+  when: realm_exists
+
+- name: Add extra properties to add parameters
+  ansible.builtin.set_fact:
+    realm_add_params: "{{ realm_add_params + ['--' + item] }}"
+  loop: "{{ pve_pocketid_extra_properties }}"
+  when:
+    - not realm_exists
+    - pve_pocketid_extra_properties | length > 0
+
+- name: Add extra properties to modify parameters
+  ansible.builtin.set_fact:
+    realm_modify_params: "{{ realm_modify_params + ['--' + item] }}"
+  loop: "{{ pve_pocketid_extra_properties }}"
+  when:
+    - realm_exists
+    - pve_pocketid_extra_properties | length > 0
+
+- name: Create Pocket ID realm
+  ansible.builtin.shell: |
+    pveum realm add {{ pve_pocketid_realm_id }} {{ realm_add_params | reject('equalto', '') | join(' ') }}
+  args:
+    executable: /bin/bash
+  when: not realm_exists
+  changed_when: true
+  no_log: true
+
+- name: Update Pocket ID realm configuration
+  ansible.builtin.shell: |
+    pveum realm modify {{ pve_pocketid_realm_id }} {{ realm_modify_params | reject('equalto', '') | join(' ') }}
+  args:
+    executable: /bin/bash
+  when: realm_exists
+  changed_when: true
+  no_log: true
+
+- name: Verify realm configuration
+  ansible.builtin.command: pveum realm list --output-format json
+  register: realm_verify
+  changed_when: false
+
+- name: Parse verification results
+  ansible.builtin.set_fact:
+    verified_realm: "{{ (realm_verify.stdout | from_json | selectattr('realm', 'equalto', pve_pocketid_realm_id) | list)[0] }}"
+
+- name: Include group management tasks
+  ansible.builtin.include_tasks: groups.yml
+  when: pve_pocketid_manage_groups | bool
+  tags:
+    - groups
+    - permissions
+
+- name: Display configuration result
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Pocket ID Realm {{ 'Created' if not realm_exists else 'Updated' }}"
+      - "=========================================="
+      - "Realm: {{ verified_realm.realm }}"
+      - "Type: {{ verified_realm.type }}"
+      - "Comment: {{ verified_realm.comment | default('None') }}"
+      - "Issuer: {{ pve_pocketid_issuer_url }}"
+      - "Client ID: {{ pve_pocketid_client_id }}"
+      - "Scopes: {{ pve_pocketid_scopes }}"
+      - "Username claim: {{ pve_pocketid_username_claim }}"
+      - "Auto-create users: {{ pve_pocketid_autocreate }}"
+      - "Auto-create groups: {{ pve_pocketid_autocreate_groups }}"
+      - "Sync groups: {{ pve_pocketid_sync_groups }}"
+      - "Default realm: {{ pve_pocketid_default }}"
+      - "=========================================="

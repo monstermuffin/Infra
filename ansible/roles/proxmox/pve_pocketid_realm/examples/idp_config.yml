@@ -1,0 +1,39 @@
+---
+# inventory/group_vars/proxmox.yml
+
+pve_pocketid_issuer_url: "https://auth.muffn.io"
+pve_pocketid_client_id: "proxmox-cluster"
+pve_pocketid_client_secret: !vault |
+
+pve_pocketid_realm_id: "pocketid"
+pve_pocketid_realm_comment: "Pocket ID OIDC Authentication"
+pve_pocketid_default: false
+
+pve_pocketid_scopes: "openid profile email groups"
+pve_pocketid_username_claim: "username"
+pve_pocketid_autocreate: true
+pve_pocketid_sync_groups: true
+pve_pocketid_autocreate_groups: true
+
+# Proxmox appends realm suffix to OIDC groups
+pve_pocketid_manage_groups: true
+pve_pocketid_groups:
+  - name: "proxmox_admins-pocketid"
+    comment: "Full admin access from Pocket ID"
+    acl:
+      - path: "/"
+        role: "Administrator"
+        propagate: true
+
+  - name: "proxmox_users-pocketid"
+    comment: "Read-only access from Pocket ID"
+    acl:
+      - path: "/"
+        role: "PVEAuditor"
+        propagate: true
+
+# Callback URLs in Pocket ID:
+# - https://10.83.2.*:8006  (AAH)
+# - https://10.82.2.*:8006  (LCY)
+# - https://10.84.2.*:8006  (LGW)
+# - https://pve*.*.muffn.io (all sites)

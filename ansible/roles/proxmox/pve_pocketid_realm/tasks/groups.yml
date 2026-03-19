@@ -1,0 +1,68 @@
+---
+- name: Get list of existing Proxmox groups
+  ansible.builtin.command: pveum group list --output-format json
+  register: existing_groups_output
+  changed_when: false
+
+- name: Parse existing groups
+  ansible.builtin.set_fact:
+    existing_groups: "{{ existing_groups_output.stdout | from_json | map(attribute='groupid') | list }}"
+
+- name: Create Proxmox groups for OIDC sync
+  ansible.builtin.command: >-
+    pveum group add "{{ item.name }}"
+    {{ '--comment "' + item.comment + '"' if item.comment | default('') | length > 0 else '' }}
+  loop: "{{ pve_pocketid_groups }}"
+  when: item.name not in existing_groups
+  changed_when: true
+
+- name: Update group comments
+  ansible.builtin.command: >-
+    pveum group modify "{{ item.name }}"
+    --comment "{{ item.comment }}"
+  loop: "{{ pve_pocketid_groups }}"
+  when:
+    - item.name in existing_groups
+    - item.comment | default('') | length > 0
+  changed_when: true
+
+- name: Get current ACL configuration
+  ansible.builtin.command: pveum acl list --output-format json
+  register: current_acl_output
+  changed_when: false
+
+- name: Parse current ACL
+  ansible.builtin.set_fact:
+    current_acl: "{{ current_acl_output.stdout | from_json }}"
+
+- name: Assign permissions to groups
+  ansible.builtin.command: >-
+    pveum acl modify {{ item.1.path }}
+    --groups "{{ item.0.name }}"
+    --roles {{ item.1.role }}
+    {{ '--propagate 1' if item.1.propagate | default(true) else '--propagate 0' }}
+  loop: "{{ pve_pocketid_groups | subelements('acl') }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1.path }} ({{ item.1.role }})"
+  when: >
+    current_acl
+    | selectattr('path', 'equalto', item.1.path)
+    | selectattr('type', 'equalto', 'group')
+    | selectattr('ugid', 'equalto', item.0.name)
+    | selectattr('roleid', 'equalto', item.1.role)
+    | list | length == 0
+  changed_when: true
+
+- name: Display group configuration
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Proxmox Groups Configured"
+      - "=========================================="
+      - "{{ item.name }}:"
+      - "  Comment: {{ item.comment | default('None') }}"
+      - "  Permissions:"
+      - "{% for acl in item.acl %}    - {{ acl.path }}: {{ acl.role }}{{ ' (propagate)' if acl.propagate | default(true) else '' }}\n{% endfor %}"
+  loop: "{{ pve_pocketid_groups }}"
+  loop_control:
+    label: "{{ item.name }}"

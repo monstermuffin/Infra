@@ -1,0 +1,48 @@
+---
+- name: Verify running on Proxmox VE
+  ansible.builtin.fail:
+    msg: "This role is designed for Proxmox VE systems only"
+  when: >
+    ansible_distribution != "Debian" or
+    not (ansible_distribution_release in ["bullseye", "bookworm", "trixie"])
+
+- name: Check if role is enabled
+  ansible.builtin.debug:
+    msg: "Pocket ID realm management is disabled (pve_pocketid_enabled: false)"
+  when: not (pve_pocketid_enabled | bool)
+
+- name: Validate required variables when configuring realm
+  ansible.builtin.assert:
+    that:
+      - pve_pocketid_realm_id | length > 0
+      - pve_pocketid_issuer_url | length > 0
+      - pve_pocketid_client_id | length > 0
+      - pve_pocketid_client_secret | length > 0
+    fail_msg: |
+      Missing required configuration:
+      - pve_pocketid_realm_id: {{ pve_pocketid_realm_id | default('NOT SET') }}
+      - pve_pocketid_issuer_url: {{ pve_pocketid_issuer_url | default('NOT SET') }}
+      - pve_pocketid_client_id: {{ pve_pocketid_client_id | default('NOT SET') }}
+      - pve_pocketid_client_secret: {{ 'SET' if pve_pocketid_client_secret | length > 0 else 'NOT SET' }}
+  when:
+    - pve_pocketid_enabled | bool
+    - pve_pocketid_state == "present"
+
+- name: Validate realm_id format
+  ansible.builtin.assert:
+    that:
+      - pve_pocketid_realm_id is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "Realm ID must contain only alphanumeric characters, hyphens, and underscores"
+  when:
+    - pve_pocketid_enabled | bool
+    - pve_pocketid_state == "present"
+
+- name: Validate issuer URL format
+  ansible.builtin.assert:
+    that:
+      - pve_pocketid_issuer_url is match('^https?://')
+    fail_msg: "Issuer URL must start with http:// or https://"
+  when:
+    - pve_pocketid_enabled | bool
+    - pve_pocketid_state == "present"
+    - pve_pocketid_issuer_url | length > 0
