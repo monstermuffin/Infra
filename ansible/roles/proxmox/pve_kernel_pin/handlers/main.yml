@@ -1,0 +1,4 @@
+---
+- name: Recommend reboot
+  ansible.builtin.debug:
+    msg: "REBOOT REQUIRED: Kernel pin configuration changed. Please reboot to apply changes."

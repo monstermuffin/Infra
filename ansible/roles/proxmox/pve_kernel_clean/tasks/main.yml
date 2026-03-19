@@ -1,0 +1,158 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_distribution is not defined
+
+- name: Check for Proxmox VE installation
+  ansible.builtin.stat:
+    path: /etc/pve
+  register: _pve_dir
+  tags: always
+
+- name: Verify running on Proxmox VE
+  ansible.builtin.assert:
+    that: _pve_dir.stat.exists and _pve_dir.stat.isdir
+    fail_msg: "This role is designed for Proxmox VE systems only (/etc/pve not found)"
+  tags: always
+
+- name: Get currently running kernel
+  ansible.builtin.command: uname -r
+  register: current_kernel
+  changed_when: false
+  tags:
+    - always
+
+- name: Get list of installed PVE kernel packages
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg --list | grep 'ii.*proxmox-kernel-' | awk '{print $2}' | grep -v "$(uname -r)" | sort -V
+  args:
+    executable: /bin/bash
+  register: old_kernels_raw
+  changed_when: false
+  failed_when: false
+  tags:
+    - always
+
+- name: Set fact for old kernel packages
+  ansible.builtin.set_fact:
+    old_kernel_packages: "{{ old_kernels_raw.stdout_lines | default([]) }}"
+  tags:
+    - always
+
+- name: Display kernel information
+  ansible.builtin.debug:
+    msg:
+      - "Current running kernel: {{ current_kernel.stdout }}"
+      - "Old kernel packages found: {{ old_kernel_packages | length }}"
+      - "{{ old_kernel_packages }}"
+  tags:
+    - always
+
+- name: No old kernels found
+  ansible.builtin.debug:
+    msg: "No old kernels detected. Current kernel: {{ current_kernel.stdout }}"
+  when: old_kernel_packages | length == 0
+  tags:
+    - always
+
+- name: Calculate kernels to remove (keep N versions)
+  ansible.builtin.set_fact:
+    kernels_to_remove: "{{ old_kernel_packages[:-pve_kernel_clean_keep_versions] if pve_kernel_clean_keep_versions > 0 else old_kernel_packages }}"
+  when:
+    - pve_kernel_clean_action == "clean"
+    - old_kernel_packages | length > 0
+  tags:
+    - clean
+
+- name: Calculate kernels to remove (remove all old)
+  ansible.builtin.set_fact:
+    kernels_to_remove: "{{ old_kernel_packages }}"
+  when:
+    - pve_kernel_clean_action == "clean-all"
+    - old_kernel_packages | length > 0
+  tags:
+    - clean
+    - clean-all
+
+- name: Display kernels that would be removed
+  ansible.builtin.debug:
+    msg:
+      - "Kernels to remove: {{ kernels_to_remove | default([]) | length }}"
+      - "{{ kernels_to_remove | default([]) }}"
+      - "Kernels to keep: {{ (old_kernel_packages | difference(kernels_to_remove | default([]))) }}"
+  when:
+    - pve_kernel_clean_action in ["clean", "clean-all"]
+    - old_kernel_packages | length > 0
+  tags:
+    - clean
+    - clean-all
+
+- name: Remove old kernel packages
+  ansible.builtin.apt:
+    name: "{{ kernels_to_remove }}"
+    state: absent
+    purge: true
+    autoremove: false
+  when:
+    - pve_kernel_clean_action in ["clean", "clean-all"]
+    - kernels_to_remove is defined
+    - kernels_to_remove | length > 0
+  register: kernel_removal
+  tags:
+    - clean
+    - clean-all
+
+- name: Run apt autoremove
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true
+  when:
+    - pve_kernel_clean_autoremove | bool
+    - kernel_removal is defined
+    - kernel_removal is changed
+  tags:
+    - clean
+    - clean-all
+    - autoremove
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+  when:
+    - pve_kernel_clean_update_grub | bool
+    - kernel_removal is defined
+    - kernel_removal is changed
+  changed_when: true
+  tags:
+    - clean
+    - clean-all
+    - grub
+
+- name: Summary of kernel cleanup
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Kernel cleanup completed"
+      - "Removed: {{ kernels_to_remove | default([]) | length }} old kernel package(s)"
+      - "Current kernel: {{ current_kernel.stdout }}"
+      - "Remaining old kernels: {{ (old_kernel_packages | difference(kernels_to_remove | default([]))) | length }}"
+      - "=========================================="
+  when:
+    - kernel_removal is defined
+    - kernel_removal is changed
+  tags:
+    - clean
+    - clean-all
+
+- name: Display no action message
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Kernel cleanup - no changes made"
+      - "Action: {{ pve_kernel_clean_action }}"
+      - "Current kernel: {{ current_kernel.stdout }}"
+      - "Old kernels found: {{ old_kernel_packages | length }}"
+      - "=========================================="
+  when: kernel_removal is not defined or kernel_removal is not changed
+  tags:
+    - always

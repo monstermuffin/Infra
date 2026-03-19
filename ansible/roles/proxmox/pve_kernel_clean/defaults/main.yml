@@ -1,0 +1,6 @@
+---
+# list: display only, clean: keep N old versions, clean-all: remove all old
+pve_kernel_clean_action: "list"
+pve_kernel_clean_keep_versions: 1
+pve_kernel_clean_autoremove: true
+pve_kernel_clean_update_grub: true

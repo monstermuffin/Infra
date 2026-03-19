@@ -1,0 +1,4 @@
+---
+# Empty string = unpin
+pve_kernel_pin_version: ""
+pve_kernel_pin_auto_reboot: false

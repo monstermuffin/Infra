@@ -1,0 +1,113 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_distribution is not defined
+
+- name: Check for Proxmox VE installation
+  ansible.builtin.stat:
+    path: /etc/pve
+  register: _pve_dir
+  tags: always
+
+- name: Verify running on Proxmox VE
+  ansible.builtin.assert:
+    that: _pve_dir.stat.exists and _pve_dir.stat.isdir
+    fail_msg: "This role is designed for Proxmox VE systems only (/etc/pve not found)"
+  tags: always
+
+- name: Get currently running kernel
+  ansible.builtin.command: uname -r
+  register: current_kernel
+  changed_when: false
+  tags:
+    - always
+
+- name: Get list of installed PVE kernels
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg --list | grep 'kernel-.*-pve' | awk '{print substr($2, 16, length($2)-22)}'
+  args:
+    executable: /bin/bash
+  register: available_kernels
+  changed_when: false
+  tags:
+    - always
+
+- name: Get current pinned kernel status
+  ansible.builtin.command: proxmox-boot-tool kernel list
+  register: kernel_pin_status
+  changed_when: false
+  tags:
+    - always
+
+- name: Check if any kernel is currently pinned
+  ansible.builtin.set_fact:
+    kernel_is_pinned: "{{ 'Pinned kernel:' in kernel_pin_status.stdout }}"
+  tags:
+    - always
+
+- name: Display current kernel information
+  ansible.builtin.debug:
+    msg:
+      - "Current running kernel: {{ current_kernel.stdout }}"
+      - "Available kernels: {{ available_kernels.stdout_lines }}"
+      - "Kernel pin status:"
+      - "{{ kernel_pin_status.stdout_lines }}"
+  tags:
+    - info
+
+- name: Unpin kernel
+  ansible.builtin.command: proxmox-boot-tool kernel unpin
+  when:
+    - pve_kernel_pin_version == ""
+    - kernel_is_pinned | bool
+  changed_when: true
+  notify: Recommend reboot
+  tags:
+    - unpin
+
+- name: Verify kernel version exists
+  ansible.builtin.fail:
+    msg: "Kernel version {{ pve_kernel_pin_version }} not found in available kernels"
+  when:
+    - pve_kernel_pin_version != ""
+    - pve_kernel_pin_version not in available_kernels.stdout_lines
+  tags:
+    - pin
+
+- name: Check if requested kernel is already pinned
+  ansible.builtin.set_fact:
+    requested_kernel_pinned: "{{ ('Pinned kernel: ' + pve_kernel_pin_version) in kernel_pin_status.stdout }}"
+  when: pve_kernel_pin_version != ""
+  tags:
+    - pin
+
+- name: Pin specific kernel version
+  ansible.builtin.command: proxmox-boot-tool kernel pin {{ pve_kernel_pin_version }}
+  when:
+    - pve_kernel_pin_version != ""
+    - not (requested_kernel_pinned | default(false) | bool)
+  changed_when: true
+  notify: Recommend reboot
+  tags:
+    - pin
+
+- name: Reboot system if auto reboot is enabled
+  ansible.builtin.reboot:
+    msg: "Rebooting after kernel pin change"
+    reboot_timeout: 300
+  when: pve_kernel_pin_auto_reboot | bool
+  tags:
+    - reboot
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Kernel pin management completed"
+      - "Current kernel: {{ current_kernel.stdout }}"
+      - "{{ 'Pinned kernel: ' + pve_kernel_pin_version if pve_kernel_pin_version != '' else 'No kernel pinned (automatic selection)' }}"
+      - "{{ 'System rebooted' if pve_kernel_pin_auto_reboot else 'REBOOT REQUIRED for changes to take effect' }}"
+      - "=========================================="
+  tags:
+    - always
