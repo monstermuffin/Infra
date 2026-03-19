@@ -1,0 +1,20 @@
+---
+# Configure Pocket ID OIDC realm on Proxmox VE hosts
+#
+# Usage:
+#   ansible-playbook playbooks/pve/pocketid_realm.yml --tags info        # Check status
+#   ansible-playbook playbooks/pve/pocketid_realm.yml                    # Configure realm
+#   ansible-playbook playbooks/pve/pocketid_realm.yml --tags remove      # Remove realm
+
+- name: Configure Pocket ID OIDC realm
+  hosts: proxmox
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: proxmox/pve_pocketid_realm
+      tags:
+        - pocketid
+        - realm
+        - auth
+        - oidc

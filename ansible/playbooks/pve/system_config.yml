@@ -1,0 +1,9 @@
+---
+# Proxmox VE System Configuration - hostname, timezone, DNS, NTP, SSH, MOTD
+
+- name: Configure Proxmox VE system settings
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_system_config

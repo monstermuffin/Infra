@@ -1,0 +1,19 @@
+---
+# Bootstrap ansible user on Proxmox hosts
+
+- name: Bootstrap ansible user
+  hosts: "{{ target_hosts }}"
+  gather_facts: false
+  vars_prompt:
+    - name: target_hosts
+      prompt: "Enter target host(s)"
+      private: false
+    - name: root_password
+      prompt: "Enter root SSH password"
+      private: true
+  vars:
+    ansible_user: root
+    ansible_ssh_pass: "{{ root_password }}"
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  roles:
+    - proxmox/pve_bootstrap_ansible_user

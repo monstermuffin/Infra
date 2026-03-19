@@ -1,0 +1,19 @@
+---
+# Proxmox VE Processor Microcode Management
+#
+# Usage examples:
+#   # Check current microcode status
+#   ansible-playbook playbooks/pve/microcode.yml
+#
+#   # Install latest microcode on all systems (mixed Intel/AMD)
+#   ansible-playbook playbooks/pve/microcode.yml --tags microcode
+#
+#   # Install without reboot
+#   ansible-playbook playbooks/pve/microcode.yml --tags install
+
+- name: Manage Proxmox VE processor microcode
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_microcode

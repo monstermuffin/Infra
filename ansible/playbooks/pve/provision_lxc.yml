@@ -1,0 +1,11 @@
+---
+# Provision LXC containers on Proxmox VE hosts/clusters
+
+- name: Provision LXC containers
+  hosts: proxmox
+  run_once: true
+  become: false
+  gather_facts: false
+
+  roles:
+    - pve_lxc_provision

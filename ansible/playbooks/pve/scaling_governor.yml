@@ -1,0 +1,19 @@
+---
+# Proxmox VE CPU Scaling Governor Management
+#
+# Usage examples:
+#   # Check current governor
+#   ansible-playbook playbooks/pve/scaling_governor.yml
+#
+#   # Set governor (set pve_scaling_governor in group_vars/proxmox.yml)
+#   ansible-playbook playbooks/pve/scaling_governor.yml --tags set
+#
+#   # Set with persistence
+#   ansible-playbook playbooks/pve/scaling_governor.yml --tags set,persistence
+
+- name: Manage Proxmox VE CPU scaling governor
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_scaling_governor

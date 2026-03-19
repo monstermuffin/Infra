@@ -1,0 +1,12 @@
+---
+# Mount CIFS/SMB shares on Proxmox VE hosts
+#
+#   ansible-playbook playbooks/pve/cifs_mount.yml --tags status      # Check mount status
+#   ansible-playbook playbooks/pve/cifs_mount.yml --tags remove      # Remove all mounts
+
+- name: Configure CIFS mounts on Proxmox VE hosts
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_cifs_mount

@@ -1,0 +1,19 @@
+---
+# Proxmox VE Kernel Pin Management
+#
+# Usage examples:
+#   # Show kernel info
+#   ansible-playbook playbooks/pve/kernel_pin.yml --tags info
+#
+#   # Pin kernel (set pve_kernel_pin_version in group_vars/proxmox.yml)
+#   ansible-playbook playbooks/pve/kernel_pin.yml
+#
+#   # Unpin kernel (set pve_kernel_pin_version: "" in group_vars/proxmox.yml)
+#   ansible-playbook playbooks/pve/kernel_pin.yml --tags unpin
+
+- name: Manage Proxmox VE kernel pinning
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_kernel_pin

@@ -1,0 +1,20 @@
+---
+# Optimize Proxmox VE hosts with eMMC storage
+#
+# Usage:
+#   # Check eMMC health (read-only)
+#   ansible-playbook playbooks/pve/emmc_optimize.yml --tags monitoring
+#
+#   # Apply specific optimizations
+#   ansible-playbook playbooks/pve/emmc_optimize.yml --tags swap,rrd
+#
+#   # Revert optimizations
+#   ansible-playbook playbooks/pve/emmc_optimize.yml --tags revert
+
+- name: Optimize Proxmox VE for eMMC storage
+  hosts: proxmox
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: proxmox/pve_emmc_optimize

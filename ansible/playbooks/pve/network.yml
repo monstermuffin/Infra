@@ -1,0 +1,11 @@
+---
+# Proxmox VE Network Configuration
+#
+# DO NOT USE YET - NOT READY FRFR
+
+- name: Configure Proxmox VE network
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_network

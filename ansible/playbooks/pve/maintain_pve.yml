@@ -1,0 +1,14 @@
+---
+# Proxmox VE Maintenance Playbook
+
+- name: Maintain Proxmox VE
+  hosts: proxmox
+  become: true
+  roles:
+    - proxmox/pve_post_install
+    - proxmox/pve_kernel_pin
+    - proxmox/pve_kernel_clean
+    - proxmox/pve_microcode
+    - proxmox/pve_scaling_governor
+    - proxmox/pve_system_config
+    - proxmox/pve_pocketid_realm

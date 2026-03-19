@@ -1,0 +1,9 @@
+---
+# Proxmox VE post-installation configuration
+
+- name: Configure Proxmox VE post-install settings
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_post_install

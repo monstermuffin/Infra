@@ -1,0 +1,19 @@
+---
+# Proxmox VE Kernel Cleanup
+#
+# Usage examples:
+#   # List old kernels (safe, no changes)
+#   ansible-playbook playbooks/pve/kernel_clean.yml
+#
+#   # Remove old kernels (set pve_kernel_clean_action: "clean" in group_vars/proxmox.yml)
+#   ansible-playbook playbooks/pve/kernel_clean.yml --tags clean
+#
+#   # Remove all old kernels
+#   ansible-playbook playbooks/pve/kernel_clean.yml --tags clean-all
+
+- name: Clean old Proxmox VE kernels
+  hosts: proxmox
+  become: true
+
+  roles:
+    - pve_kernel_clean
