@@ -1,0 +1,52 @@
+---
+- name: Fetch available AMD microcode packages
+  ansible.builtin.uri:
+    url: "https://ftp.debian.org/debian/pool/non-free-firmware/a/amd64-microcode/"
+    return_content: true
+  register: amd_repo_html
+  when: pve_microcode_action == "latest" or pve_microcode_package == ""
+
+- name: Parse AMD microcode package list
+  ansible.builtin.set_fact:
+    amd_packages: "{{ amd_repo_html.content | regex_findall('href=\"([^\"]*amd64\\.deb)\"') | sort | reverse }}"
+  when: pve_microcode_action == "latest" or pve_microcode_package == ""
+
+- name: Set latest AMD microcode package
+  ansible.builtin.set_fact:
+    microcode_package_to_install: "{{ amd_packages[0] }}"
+    microcode_url: "https://ftp.debian.org/debian/pool/non-free-firmware/a/amd64-microcode/{{ amd_packages[0] }}"
+  when:
+    - pve_microcode_action == "latest" or pve_microcode_package == ""
+    - amd_packages | length > 0
+
+- name: Set specific AMD microcode package
+  ansible.builtin.set_fact:
+    microcode_package_to_install: "{{ pve_microcode_package }}"
+    microcode_url: "https://ftp.debian.org/debian/pool/non-free-firmware/a/amd64-microcode/{{ pve_microcode_package }}"
+  when:
+    - pve_microcode_package != ""
+    - pve_microcode_action == "install"
+
+- name: Download AMD microcode package
+  ansible.builtin.get_url:
+    url: "{{ microcode_url }}"
+    dest: "/tmp/{{ microcode_package_to_install }}"
+    mode: "0644"
+  register: microcode_download
+
+- name: Install AMD microcode package
+  ansible.builtin.apt:
+    deb: "/tmp/{{ microcode_package_to_install }}"
+    state: present
+  register: microcode_installed
+
+- name: Remove downloaded microcode package
+  ansible.builtin.file:
+    path: "/tmp/{{ microcode_package_to_install }}"
+    state: absent
+
+- name: Display installation result
+  ansible.builtin.debug:
+    msg:
+      - "Installed: {{ microcode_package_to_install }}"
+      - "Reboot required to apply"

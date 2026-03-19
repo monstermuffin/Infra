@@ -1,0 +1,13 @@
+---
+# check: show current microcode status
+# install: install specific version (set pve_microcode_package)
+# latest: install latest from Debian repos
+pve_microcode_action: "check"
+
+# Specific .deb filename when using action: install
+pve_microcode_package: ""
+
+pve_microcode_auto_reboot: false
+
+# Override auto-detection: 'intel' or 'amd'
+pve_microcode_vendor: ""

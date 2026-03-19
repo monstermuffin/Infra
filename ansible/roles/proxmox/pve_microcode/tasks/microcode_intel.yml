@@ -1,0 +1,58 @@
+---
+- name: Install iucode-tool for Intel microcode
+  ansible.builtin.apt:
+    name: iucode-tool
+    state: present
+    update_cache: false
+
+- name: Fetch available Intel microcode packages
+  ansible.builtin.uri:
+    url: "https://ftp.debian.org/debian/pool/non-free-firmware/i/intel-microcode/"
+    return_content: true
+  register: intel_repo_html
+  when: pve_microcode_action == "latest" or pve_microcode_package == ""
+
+- name: Parse Intel microcode package list
+  ansible.builtin.set_fact:
+    intel_packages: "{{ intel_repo_html.content | regex_findall('href=\"([^\"]*amd64\\.deb)\"') | sort | reverse }}"
+  when: pve_microcode_action == "latest" or pve_microcode_package == ""
+
+- name: Set latest Intel microcode package
+  ansible.builtin.set_fact:
+    microcode_package_to_install: "{{ intel_packages[0] }}"
+    microcode_url: "https://ftp.debian.org/debian/pool/non-free-firmware/i/intel-microcode/{{ intel_packages[0] }}"
+  when:
+    - pve_microcode_action == "latest" or pve_microcode_package == ""
+    - intel_packages | length > 0
+
+- name: Set specific Intel microcode package
+  ansible.builtin.set_fact:
+    microcode_package_to_install: "{{ pve_microcode_package }}"
+    microcode_url: "https://ftp.debian.org/debian/pool/non-free-firmware/i/intel-microcode/{{ pve_microcode_package }}"
+  when:
+    - pve_microcode_package != ""
+    - pve_microcode_action == "install"
+
+- name: Download Intel microcode package
+  ansible.builtin.get_url:
+    url: "{{ microcode_url }}"
+    dest: "/tmp/{{ microcode_package_to_install }}"
+    mode: "0644"
+  register: microcode_download
+
+- name: Install Intel microcode package
+  ansible.builtin.apt:
+    deb: "/tmp/{{ microcode_package_to_install }}"
+    state: present
+  register: microcode_installed
+
+- name: Remove downloaded microcode package
+  ansible.builtin.file:
+    path: "/tmp/{{ microcode_package_to_install }}"
+    state: absent
+
+- name: Display installation result
+  ansible.builtin.debug:
+    msg:
+      - "Installed: {{ microcode_package_to_install }}"
+      - "Reboot required to apply"

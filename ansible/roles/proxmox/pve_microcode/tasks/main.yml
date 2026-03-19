@@ -1,0 +1,101 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_distribution is not defined
+
+- name: Verify running on Proxmox VE
+  ansible.builtin.fail:
+    msg: "This role is designed for Proxmox VE systems only"
+  when: >
+    ansible_distribution != "Debian" or
+    not (ansible_distribution_release in ["bullseye", "bookworm", "trixie"])
+  tags:
+    - always
+
+- name: Check current microcode revision
+  ansible.builtin.shell: |
+    set -o pipefail
+    journalctl -k | grep -i 'microcode: Current revision:' | grep -oP 'Current revision: \K0x[0-9a-f]+' | tail -1
+  args:
+    executable: /bin/bash
+  register: current_microcode
+  changed_when: false
+  failed_when: false
+  tags:
+    - always
+
+- name: Detect CPU vendor from processor info
+  ansible.builtin.set_fact:
+    detected_cpu_vendor: "{{ ansible_processor | join(' ') | regex_search('GenuineIntel|AuthenticAMD') | default('') }}"
+  tags:
+    - always
+
+- name: Set CPU vendor from detection
+  ansible.builtin.set_fact:
+    auto_detected_vendor: >-
+      {{ 'intel' if detected_cpu_vendor == 'GenuineIntel'
+         else ('amd' if detected_cpu_vendor == 'AuthenticAMD' else 'unknown') }}
+  tags:
+    - always
+
+- name: Set CPU vendor (use override or auto-detected)
+  ansible.builtin.set_fact:
+    cpu_vendor: "{{ pve_microcode_vendor if pve_microcode_vendor != '' else auto_detected_vendor }}"
+  tags:
+    - always
+
+- name: Skip microcode installation for unsupported CPU
+  ansible.builtin.debug:
+    msg:
+      - "CPU vendor could not be detected or is not supported"
+      - "Detected: {{ detected_cpu_vendor | default('none') }}"
+      - "Skipping microcode installation"
+  when: cpu_vendor == "unknown"
+  tags:
+    - always
+
+- name: End play for unsupported CPUs
+  ansible.builtin.meta: end_host
+  when: cpu_vendor == "unknown"
+  tags:
+    - always
+
+- name: Display microcode information
+  ansible.builtin.debug:
+    msg:
+      - "CPU Vendor: {{ cpu_vendor }}"
+      - "Current microcode revision: {{ current_microcode.stdout if current_microcode.stdout != '' else 'Not found' }}"
+  tags:
+    - always
+
+- name: Include Intel microcode tasks
+  ansible.builtin.include_tasks: microcode_intel.yml
+  when:
+    - cpu_vendor == "intel"
+    - pve_microcode_action in ["install", "latest"]
+  tags:
+    - install
+    - microcode
+    - intel
+
+- name: Include AMD microcode tasks
+  ansible.builtin.include_tasks: microcode_amd.yml
+  when:
+    - cpu_vendor == "amd"
+    - pve_microcode_action in ["install", "latest"]
+  tags:
+    - install
+    - microcode
+    - amd
+
+- name: Reboot system if auto reboot is enabled
+  ansible.builtin.reboot:
+    msg: "Rebooting after microcode installation"
+    reboot_timeout: 300
+  when:
+    - pve_microcode_auto_reboot | bool
+    - microcode_installed is defined
+    - microcode_installed is changed
+  tags:
+    - reboot
+    - microcode
