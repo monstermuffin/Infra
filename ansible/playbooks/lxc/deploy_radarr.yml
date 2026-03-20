@@ -7,8 +7,10 @@
   gather_facts: true
 
   roles:
-    - role: lxc/radarr
+    - role: podman
+      tags:
+        - podman
+    - role: apps/podman/radarr
       tags:
         - radarr
-        - podman
         - lxc_app
