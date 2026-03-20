@@ -1,4 +1,6 @@
 ---
+podman_enabled: true
+
 # LXC App Config
 proxmox_vmid: 112
 proxmox_node: pve03.aah.muffn.io
