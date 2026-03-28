@@ -16,5 +16,5 @@ sonarr_timezone: Europe/London
 sonarr_container_port: 8989
 
 sonarr_config_dir: /opt/sonarr/config
-sonarr_tv_dir: /opt/sonarr/tv
+sonarr_tv_dir: /tv
 sonarr_downloads_dir: /opt/sonarr/downloads

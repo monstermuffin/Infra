@@ -16,5 +16,5 @@ radarr_timezone: Europe/London
 radarr_container_port: 7878
 
 radarr_config_dir: /opt/radarr/config
-radarr_movies_dir: /opt/radarr/movies
+radarr_movies_dir: /movies
 radarr_downloads_dir: /opt/radarr/downloads
