@@ -31,7 +31,8 @@
 
 - name: "Set delegate host for container operations — {{ _lxc_name }}"
   ansible.builtin.set_fact:
-    _lxc_delegate_host: "{{ _lxc_current_node }}.{{ pve_cluster_domain }}"
+    _lxc_delegate_host: >-
+      {{ _lxc_current_node ~ '.' ~ pve_cluster_domain if pve_cluster_domain else inventory_hostname }}
 
 - name: "Build features string — {{ _lxc_name }}"
   ansible.builtin.set_fact:

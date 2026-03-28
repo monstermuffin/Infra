@@ -1,8 +1,4 @@
 ---
-# pve_cluster_domain is needed so the provision role can delegate to the right
-# node FQDN via _lxc_current_node + "." + pve_cluster_domain
-pve_cluster_domain: "aah.muffn.io"
-
 pve_lxc_default_network_bridge: "vmbr1"
 pve_lxc_default_storage: "local-zfs"
 
@@ -27,5 +23,5 @@ pve_lxcs:
       - site_aah
       - app_qdevice
     features:
-      nesting: false
+      nesting: true
       keyctl: false
