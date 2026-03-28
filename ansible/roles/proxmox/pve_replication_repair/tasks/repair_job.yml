@@ -1,0 +1,132 @@
+---
+# _repl_job: one entry from pvesh get /cluster/replication
+
+- name: "Resolve source node — {{ _repl_job.id }}"
+  ansible.builtin.set_fact:
+    _repl_job_vmid: "{{ _repl_job.id.split('-')[0] }}"
+    _repl_job_source: >-
+      {{
+        _repl_repair_vm_map.get(_repl_job.id.split('-')[0], _repl_job.source | default(''))
+      }}
+    _repl_job_target: "{{ _repl_job.target }}"
+    _repl_job_domain: "{{ inventory_hostname | regex_replace('^[^.]+\\.', '') }}"
+
+- name: "Fetch replication log — {{ _repl_job.id }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh get /nodes/{{ _repl_job_source }}/replication/{{ _repl_job.id }}/log --output-format json"
+  delegate_to: "{{ _repl_job_source }}.{{ _repl_job_domain }}"
+  register: _repl_job_log
+  changed_when: false
+  failed_when: false
+  # Only target source node of repl
+  when: _repl_job_source == inventory_hostname.split('.')[0]
+
+- name: "Detect broken base snapshot — {{ _repl_job.id }}"
+  ansible.builtin.set_fact:
+    _repl_job_broken: >-
+      {{
+        (_repl_job_log.stdout | default('[]') | from_json)
+        | map(attribute='t', default='')
+        | select('search', 'No common base snapshot')
+        | list | length > 0
+      }}
+  when: _repl_job_source == inventory_hostname.split('.')[0]
+
+- name: "Report healthy job — {{ _repl_job.id }}"
+  ansible.builtin.debug:
+    msg: "OK: replication job {{ _repl_job.id }} ({{ _repl_job_source }} → {{ _repl_job_target }}) is healthy"
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - not _repl_job_broken | bool
+
+- name: "Report broken job — {{ _repl_job.id }}"
+  ansible.builtin.debug:
+    msg: >-
+      BROKEN: job {{ _repl_job.id }} ({{ _repl_job_source }} → {{ _repl_job_target }})
+      has no common base snapshot on target.
+      {{ '[DRY RUN] Would destroy orphaned dataset and re-sync.' if pve_replication_repair_dry_run else 'Repairing...' }}
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+
+- name: "List ZFS datasets on target node — {{ _repl_job.id }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "zfs list -H -o name"
+  delegate_to: "{{ _repl_job_target }}.{{ _repl_job_domain }}"
+  register: _repl_job_target_datasets
+  changed_when: false
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+
+- name: "Destroy orphaned dataset on target — {{ _repl_job.id }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "zfs destroy -r {{ item }}"
+  delegate_to: "{{ _repl_job_target }}.{{ _repl_job_domain }}"
+  loop: >-
+    {{
+      (_repl_job_target_datasets.stdout_lines | default([]))
+      | select('search', 'subvol-' ~ _repl_job_vmid ~ '-disk')
+      | list
+    }}
+  changed_when: true
+  failed_when: >-
+    _repl_destroy.rc != 0 and
+    'dataset does not exist' not in (_repl_destroy.stderr | default(''))
+  register: _repl_destroy
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+    - not pve_replication_repair_dry_run | bool
+
+- name: "Re-trigger replication after reset — {{ _repl_job.id }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh create /nodes/{{ _repl_job_source }}/replication/{{ _repl_job.id }}/schedule_now"
+  delegate_to: "{{ _repl_job_source }}.{{ _repl_job_domain }}"
+  changed_when: true
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+    - not pve_replication_repair_dry_run | bool
+
+- name: "Wait for replication to complete — {{ _repl_job.id }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pvesh get /nodes/{{ _repl_job_source }}/replication/{{ _repl_job.id }}/log --output-format json"
+  delegate_to: "{{ _repl_job_source }}.{{ _repl_job_domain }}"
+  register: _repl_job_verify_log
+  changed_when: false
+  failed_when: false
+  until: >-
+    (_repl_job_verify_log.stdout | default('[]') | from_json)
+    | map(attribute='t', default='')
+    | select('search', 'end replication job')
+    | list | length > 0
+  retries: 24
+  delay: 5
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+    - not pve_replication_repair_dry_run | bool
+
+- name: "Report repair result — {{ _repl_job.id }}"
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        'REPAIRED: job ' ~ _repl_job.id ~ ' re-synced successfully.'
+        if not (
+          (_repl_job_verify_log.stdout | default('[]') | from_json)
+          | map(attribute='t', default='')
+          | select('search', 'error')
+          | list | length > 0
+        )
+        else 'WARNING: job ' ~ _repl_job.id ~ ' still has errors after repair — manual intervention required.'
+      }}
+  when:
+    - _repl_job_source == inventory_hostname.split('.')[0]
+    - _repl_job_broken | bool
+    - not pve_replication_repair_dry_run | bool

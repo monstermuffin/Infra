@@ -1,0 +1,57 @@
+---
+- name: Get all replication jobs on cluster
+  become: true
+  ansible.builtin.command:
+    cmd: pvesh get /cluster/replication --output-format json
+  register: _repl_repair_all_jobs
+  changed_when: false
+  tags: [check, repair]
+
+- name: Get current container locations
+  become: true
+  ansible.builtin.command:
+    cmd: pvesh get /cluster/resources --type vm --output-format json
+  register: _repl_repair_resources
+  changed_when: false
+  tags: [check, repair]
+
+- name: Set jobs to inspect
+  ansible.builtin.set_fact:
+    _repl_repair_jobs_all: >-
+      {{
+        (_repl_repair_all_jobs.stdout | from_json)
+        | rejectattr('disable', 'defined') | list
+        | selectattr('type', 'equalto', 'local') | list
+      }}
+    _repl_repair_vm_map: >-
+      {{
+        dict(
+          (_repl_repair_resources.stdout | from_json)
+          | selectattr('type', 'in', ['lxc', 'qemu'])
+          | map(attribute='vmid') | map('string')
+          | zip(
+              (_repl_repair_resources.stdout | from_json)
+              | selectattr('type', 'in', ['lxc', 'qemu'])
+              | map(attribute='node')
+            )
+        )
+      }}
+
+- name: Apply job ID filter if specified
+  ansible.builtin.set_fact:
+    _repl_repair_jobs: >-
+      {{
+        _repl_repair_jobs_all
+        | selectattr('id', 'in', pve_replication_repair_jobs) | list
+        if pve_replication_repair_jobs | length > 0
+        else _repl_repair_jobs_all
+      }}
+  tags: [check, repair]
+
+- name: Inspect and repair replication jobs
+  ansible.builtin.include_tasks: repair_job.yml
+  loop: "{{ _repl_repair_jobs }}"
+  loop_control:
+    loop_var: _repl_job
+    label: "{{ _repl_job.id }}"
+  tags: [check, repair]

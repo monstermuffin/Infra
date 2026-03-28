@@ -1,0 +1,6 @@
+---
+- name: Fix PVE replication jobs
+  hosts: aah-cluster01
+  gather_facts: false
+  roles:
+    - role: proxmox/pve_replication_repair
