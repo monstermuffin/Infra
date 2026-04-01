@@ -5,3 +5,7 @@ v1 was a mess and could not be uploaded publically without many breaking changes
 
 This repo is a rewrite of my infrastructure, starting from scratch with many changes to the tools and technologies used.
 
+## TODO
+
+- [ ] Fix/Understand why `netavark` is accumulating stale nftables DNAT rules when `state: restarted` is used, or any kind of redeploy happens.
+  - Current 'workaround' is rebooting the LXC.

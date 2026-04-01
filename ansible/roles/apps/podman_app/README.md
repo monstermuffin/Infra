@@ -91,8 +91,3 @@ The role attempts to reconcile desired state in `podman_apps` against actual sta
 - `deploy` — full deploy
 - `image` — pull image
 - `note` — update PVE container notes
-
-## TODO
-
-- [ ] Fix/Understand why `netavark` is accumulating stale nftables DNAT rules when `state: restarted` is used, or any kind of redeploy happens.
-  - Current 'workaround' is rebooting the LXC.
