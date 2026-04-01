@@ -1,0 +1,4 @@
+# We do a lil secrecy
+ansible/inventory/group_vars/*/bindings.yml filter=git-crypt diff=git-crypt
+ansible/inventory/host_vars/*/bindings.yml filter=git-crypt diff=git-crypt
+ansible/inventory/host_vars/*/*/bindings.yml filter=git-crypt diff=git-crypt
