@@ -1,0 +1,27 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Match removate tags for container images",
+      "fileMatch": [
+        "(^|/)ansible/inventory/.+\\.ya?ml$",
+        "(^|/)ansible/roles/.+/defaults/main\\.yml$"
+      ],
+      "matchStrings": [
+        "# renovate:\\s+datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["ghcr.io/home-operations/.*"],
+      "automerge": false,
+      "labels": ["renovate", "container"]
+    }
+  ]
+}
