@@ -1,4 +1,58 @@
 ---
+- name: Validate split ingress route inputs
+  ansible.builtin.assert:
+    that:
+      - ingress_route_bindings[route_spec.key] is defined
+      - ingress_route_bindings[route_spec.key].hostname is defined
+      - ingress_route_bindings[route_spec.key].hostname | length > 0
+      - ingress_route_bindings[route_spec.key].upstream_host is defined
+      - ingress_route_bindings[route_spec.key].upstream_host | length > 0
+      - route_spec.value.service_port is defined
+    fail_msg: "Each ingress_route_specs entry requires a matching binding with hostname and upstream_host plus a service_port."
+  loop: "{{ ingress_route_specs | dict2items }}"
+  loop_control:
+    loop_var: route_spec
+    label: "{{ route_spec.key }}"
+  when:
+    - ingress_routes | length == 0
+    - ingress_route_specs | length > 0
+  tags:
+    - always
+
+- name: Compose ingress routes from specs and bindings
+  ansible.builtin.set_fact:
+    ingress_routes: "{{ (ingress_routes | default([])) + [route_data] }}"
+  vars:
+    route_binding: "{{ ingress_route_bindings[route_spec.key] }}"
+    route_data: >-
+      {{
+        {
+          'name': route_spec.key,
+          'hostname': route_binding.hostname,
+          'service_url': (
+            (route_spec.value.service_scheme | default(ingress_route_service_scheme_default))
+            ~ '://'
+            ~ route_binding.upstream_host
+            ~ ':'
+            ~ (route_spec.value.service_port | string)
+          ),
+          'oidc_enabled': route_spec.value.oidc_enabled | default(false)
+        }
+        | combine(
+            (route_spec.value.exempt_paths is defined)
+            | ternary({'exempt_paths': route_spec.value.exempt_paths}, {})
+          )
+      }}
+  loop: "{{ ingress_route_specs | dict2items }}"
+  loop_control:
+    loop_var: route_spec
+    label: "{{ route_spec.key }}"
+  when:
+    - ingress_routes | length == 0
+    - ingress_route_specs | length > 0
+  tags:
+    - always
+
 - name: Determine whether any routes require OIDC
   ansible.builtin.set_fact:
     _ingress_oidc_required: "{{ ingress_routes | selectattr('oidc_enabled', 'defined') | selectattr('oidc_enabled') | list | length > 0 }}"
