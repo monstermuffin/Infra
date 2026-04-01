@@ -1,0 +1,41 @@
+---
+# Deploy ingress stack
+#
+# Components:
+#   apps/cftun      - validates Cloudflare tunnel token input
+#   apps/ingress    - renders Traefik config and installs CrowdSec agent
+#   apps/podman_app - deploys cloudflared + Traefik via Quadlet
+#
+# Usage:
+#   ansible-playbook playbooks/app/ingress.yml
+#   ansible-playbook playbooks/app/ingress.yml --limit tag_app_ingress_aah
+#   ansible-playbook playbooks/app/ingress.yml --tags config
+#   ansible-playbook playbooks/app/ingress.yml --tags image,deploy
+
+- name: Deploy ingress stack
+  hosts: "{{ target | default('tag_app_ingress') }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: lxc/base
+      tags:
+        - base
+        - setup
+    - role: podman
+      tags:
+        - podman
+        - install
+    - role: apps/cftun
+      tags:
+        - config
+        - cftun
+    - role: apps/ingress
+      tags:
+        - ingress
+        - traefik
+        - crowdsec
+    - role: apps/podman_app
+      tags:
+        - app
+        - deploy
