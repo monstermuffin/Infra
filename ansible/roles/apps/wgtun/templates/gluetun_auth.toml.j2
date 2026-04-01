@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+[[roles]]
+name = "qsticky"
+routes = [
+  "GET /v1/portforward",
+  "GET /v1/vpn/status"
+]
+auth = "apikey"
+apikey = "{{ wgtun_gluetun_apikey }}"
