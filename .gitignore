@@ -26,6 +26,7 @@ inventories/inventory.yml
 scripts/tf-env.sh
 ansible/roles/apps/podman/frigate
 ansible/roles/apps/docker/frigate
+ansible/roles/apps/docker/technitium
 
 # Terraform - not ready yet
 tf/
