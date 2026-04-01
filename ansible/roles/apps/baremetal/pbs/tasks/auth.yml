@@ -1,0 +1,97 @@
+---
+- name: Validate PBS admin bootstrap settings
+  ansible.builtin.assert:
+    that:
+      - pbs_admin_userid | trim | length > 0
+      - pbs_admin_password | trim | length > 0
+      - "'@pbs' in pbs_admin_userid"
+      - pbs_admin_role | trim | length > 0
+      - pbs_admin_path | trim | length > 0
+    fail_msg: >-
+      Set pbs_admin_password in host_vars before deploying PBS. Use a vault-encrypted
+      secret for the {{ pbs_admin_userid }} bootstrap account.
+  tags:
+    - auth
+    - password
+
+- name: Read PBS user configuration
+  ansible.builtin.command:
+    argv:
+      - proxmox-backup-manager
+      - user
+      - list
+      - --output-format
+      - json
+  register: _pbs_user_list
+  changed_when: false
+  tags:
+    - auth
+    - password
+
+- name: Create PBS bootstrap admin user
+  ansible.builtin.command:
+    argv:
+      - proxmox-backup-manager
+      - user
+      - create
+      - "{{ pbs_admin_userid }}"
+      - --comment
+      - "{{ pbs_admin_comment }}"
+      - --password
+      - "{{ pbs_admin_password }}"
+  no_log: true
+  register: _pbs_user_create
+  changed_when: _pbs_user_create.rc == 0
+  when: pbs_admin_userid not in (_pbs_user_list.stdout | default(''))
+  tags:
+    - auth
+    - password
+
+- name: Ensure PBS bootstrap admin metadata is current
+  ansible.builtin.command:
+    argv:
+      - proxmox-backup-manager
+      - user
+      - update
+      - "{{ pbs_admin_userid }}"
+      - --comment
+      - "{{ pbs_admin_comment }}"
+      - --enable
+      - "1"
+  register: _pbs_user_update
+  changed_when: false
+  when: pbs_admin_userid in (_pbs_user_list.stdout | default(''))
+  tags:
+    - auth
+    - password
+
+- name: Read PBS ACL configuration
+  ansible.builtin.command:
+    argv:
+      - cat
+      - /etc/proxmox-backup/acl.cfg
+  register: _pbs_acl_cfg
+  changed_when: false
+  failed_when: false
+  tags:
+    - auth
+    - password
+
+- name: Grant PBS bootstrap admin role
+  ansible.builtin.command:
+    argv:
+      - proxmox-backup-manager
+      - acl
+      - update
+      - "{{ pbs_admin_path }}"
+      - "{{ pbs_admin_role }}"
+      - --auth-id
+      - "{{ pbs_admin_userid }}"
+  register: _pbs_acl_update
+  changed_when: _pbs_acl_update.rc == 0
+  when: >-
+    ('acl:1:' ~ pbs_admin_path ~ ':' ~ pbs_admin_userid ~ ':' ~ pbs_admin_role)
+    not in (_pbs_acl_cfg.stdout | default(''))
+  tags:
+    - auth
+    - password

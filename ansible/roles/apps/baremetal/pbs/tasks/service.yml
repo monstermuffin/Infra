@@ -1,0 +1,11 @@
+---
+- name: Enable and start PBS services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: "{{ pbs_service_enable }}"
+    state: "{{ 'started' if pbs_service_start else 'stopped' }}"
+    daemon_reload: true
+  loop: "{{ pbs_services }}"
+  tags:
+    - service
+    - start

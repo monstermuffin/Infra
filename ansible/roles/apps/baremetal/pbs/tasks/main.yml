@@ -1,0 +1,46 @@
+---
+- name: Preflight check
+  ansible.builtin.fail:
+    msg: >
+      PBS role is not enabled. Set 'pbs_enabled: true' in host_vars to enable deployment.
+  when: not pbs_enabled
+  tags: always
+
+- name: Validate PBS host OS
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - ansible_facts['distribution_release'] == pbs_repo_suite
+    fail_msg: >-
+      PBS repo suite '{{ pbs_repo_suite }}' must match the host Debian release
+      '{{ ansible_facts['distribution_release'] }}'. Override pbs_repo_suite
+      and pbs_keyring_url together when changing Debian major versions.
+  tags: always
+
+- name: Configure Proxmox Backup repository
+  ansible.builtin.import_tasks: repo.yml
+  tags:
+    - pbs
+    - repo
+    - setup
+
+- name: Install PBS packages
+  ansible.builtin.import_tasks: install.yml
+  tags:
+    - pbs
+    - install
+    - packages
+
+- name: Manage PBS services
+  ansible.builtin.import_tasks: service.yml
+  tags:
+    - pbs
+    - service
+    - start
+
+- name: Bootstrap PBS admin user
+  ansible.builtin.import_tasks: auth.yml
+  tags:
+    - pbs
+    - auth
+    - password

@@ -1,0 +1,51 @@
+---
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - wget
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags:
+    - repo
+    - prerequisites
+
+- name: Download Proxmox archive keyring
+  ansible.builtin.get_url:
+    url: "{{ pbs_keyring_url }}"
+    dest: "{{ pbs_keyring_dest }}"
+    mode: "0644"
+  tags:
+    - repo
+    - keyring
+
+- name: Disable PBS enterprise repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/pbs-enterprise.sources
+    mode: "0644"
+    content: |
+      Types: deb
+      URIs: https://enterprise.proxmox.com/debian/pbs
+      Suites: {{ pbs_repo_suite }}
+      Components: pbs-enterprise
+      Enabled: false
+      Signed-By: {{ pbs_keyring_dest }}
+  notify: Update apt cache
+  tags:
+    - repo
+
+- name: Configure Proxmox PBS no-subscription repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/proxmox-pbs.sources
+    mode: "0644"
+    content: |
+      Types: deb
+      URIs: http://download.proxmox.com/debian/pbs
+      Suites: {{ pbs_repo_suite }}
+      Components: {{ pbs_repo_component }}
+      Signed-By: {{ pbs_keyring_dest }}
+  notify: Update apt cache
+  tags:
+    - repo

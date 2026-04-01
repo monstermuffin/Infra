@@ -1,0 +1,32 @@
+---
+pbs_enabled: false
+
+pbs_keyring_url: https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg
+pbs_keyring_dest: /usr/share/keyrings/proxmox-archive-keyring.gpg
+pbs_repo_suite: trixie
+pbs_repo_component: pbs-no-subscription
+
+pbs_packages:
+  - proxmox-backup-server
+
+# Bootstrap admin user as root@pam is no beauno
+pbs_admin_userid: "admin@pbs"
+pbs_admin_comment: "Ansible Admin"
+pbs_admin_role: "Admin"
+pbs_admin_path: "/"
+
+pbs_services:
+  - proxmox-backup
+  - proxmox-backup-proxy
+pbs_service_start: true
+pbs_service_enable: true
+
+
+pbs_admin_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          63303636353732653937653533303537383439393236383237386135656530353361386134643564
+          3631653765333833643630306337653738323631356437370a306537623739386139353066323766
+          38306533643734313561383431386634656364356161323837323836643262396237303533336432
+          3332383866303137330a306366363665616533353864313734343035306239666462306630343762
+          66396663646261623037366463643761616631616266336636623535393166623334363862616166
+          3335383166656363356234613332613031376632306336323033

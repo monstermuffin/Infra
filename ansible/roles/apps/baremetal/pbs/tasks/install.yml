@@ -1,0 +1,9 @@
+---
+- name: Install PBS packages
+  ansible.builtin.apt:
+    name: "{{ pbs_packages }}"
+    state: present
+    update_cache: true
+  tags:
+    - install
+    - packages
