@@ -43,7 +43,7 @@ podman_apps:
     enabled: true
     image: ghcr.io/paperless-ngx/paperless-ngx
     # renovate: datasource=docker depName=ghcr.io/paperless-ngx/paperless-ngx
-    tag: latest
+    tag: 2.20.13
     port: 8084
     container_port: 8000
     uid: 993

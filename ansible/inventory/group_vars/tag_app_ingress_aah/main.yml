@@ -113,8 +113,8 @@ ingress_oidc_session_secret: !vault |
 podman_apps:
   traefik:
     enabled: true
-    image: traefik
-    # renovate: datasource=docker depName=traefik
+    image: ghcr.io/traefik/traefik
+    # renovate: datasource=docker depName=ghcr.io/traefik/traefik
     tag: v3.6.12
     description: AAH ingress Traefik proxy
     container_name: traefik-proxy

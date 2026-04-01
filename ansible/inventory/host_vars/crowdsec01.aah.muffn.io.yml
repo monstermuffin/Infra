@@ -8,6 +8,7 @@ podman_apps:
   crowdsec-web-ui:
     enabled: true
     image: ghcr.io/theduffman85/crowdsec-web-ui
+    # renovate: datasource=docker depName=ghcr.io/theduffman85/crowdsec-web-ui
     tag: 2026.3.6
     description: CrowdSec Web UI
     port: 3000

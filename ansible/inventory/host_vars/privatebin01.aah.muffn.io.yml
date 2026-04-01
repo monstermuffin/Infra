@@ -6,8 +6,8 @@ podman_enabled: true
 podman_apps:
   privatebin:
     enabled: true
-    image: privatebin/nginx-fpm-alpine
-    # renovate: datasource=docker depName=privatebin/nginx-fpm-alpine
+    image: ghcr.io/privatebin/nginx-fpm-alpine
+    # renovate: datasource=docker depName=ghcr.io/privatebin/nginx-fpm-alpine
     tag: "2.0.3"
     port: 8080
     user: "984:983"

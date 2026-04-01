@@ -75,8 +75,8 @@ podman_apps:
 
   firefox:
     enabled: true
-    image: jlesage/firefox
-    # renovate: datasource=docker depName=jlesage/firefox
+    image: ghcr.io/jlesage/firefox
+    # renovate: datasource=docker depName=ghcr.io/jlesage/firefox
     tag: v26.03.1
     network_mode: container:gluetun
     after:
@@ -144,7 +144,7 @@ podman_apps:
     enabled: true
     image: ghcr.io/esanchezm/prometheus-qbittorrent-exporter
     # renovate: datasource=docker depName=ghcr.io/esanchezm/prometheus-qbittorrent-exporter
-    tag: latest
+    tag: v1.6.0
     port: 9171
     after:
       - qbittorrent.service

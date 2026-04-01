@@ -5,9 +5,9 @@ podman_enabled: true
 
 podman_apps:
   pulse:
-    enabled: true
-    # renovate: datasource=docker depName=ghcr.io/rcourtman/pulse
+    enabled: false
     image: ghcr.io/rcourtman/pulse
+    # renovate: datasource=docker depName=ghcr.io/rcourtman/pulse
     tag: 5.1.26
     port: 7655
     volumes:

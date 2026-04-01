@@ -11,7 +11,7 @@ podman_apps:
     enabled: true
     image: dgtlmoon/sockpuppetbrowser
     # renovate: datasource=docker depName=dgtlmoon/sockpuppetbrowser
-    tag: latest
+    tag: 0.0.3
     container_name: playwright_changedetection
     network: changedetection
     env:
@@ -28,7 +28,7 @@ podman_apps:
     enabled: true
     image: selenium/standalone-chrome
     # renovate: datasource=docker depName=selenium/standalone-chrome
-    tag: latest
+    tag: 145.0.7632.116-20260222
     container_name: chrome_changedetection
     network: changedetection
     shm_size: 2g
@@ -62,7 +62,7 @@ podman_apps:
     enabled: true
     image: dgtlmoon/changedetection.io
     # renovate: datasource=docker depName=dgtlmoon/changedetection.io
-    tag: latest
+    tag: 0.54.7
     container_name: changedetection-io
     port: 5011
     container_port: 5000
