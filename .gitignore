@@ -7,6 +7,7 @@ ansible/collections/
 *.secret
 docs/
 .env
+*claude*
 ansible/.venv
 .envrc
 *.key
@@ -21,6 +22,10 @@ inventories/*/inventory.yml
 inventories/inventory.yml
 !*.example.yml
 !*.example
+scripts/tf-env.sh
+ansible/roles/apps/podman/frigate
+ansible/roles/apps/docker/frigate
 
 # Terraform - not ready yet
 tf/
+tf_old/
