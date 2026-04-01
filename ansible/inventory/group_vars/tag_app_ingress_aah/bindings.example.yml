@@ -1,0 +1,20 @@
+---
+# Example bindings for reference.
+
+ingress_route_bindings:
+  radarr:
+    hostname: radarr.example.com
+    upstream_host: 10.0.0.10
+  sonarr:
+    hostname: sonarr.example.com
+    upstream_host: 10.0.0.11
+  qbit:
+    hostname: qbit.example.com
+    upstream_host: 10.0.0.12
+  paperless:
+    hostname: docs.example.net
+    upstream_host: 10.0.0.13
+
+ingress_crowdsec_lapi_host: "10.0.0.20:8080"
+ingress_oidc_issuer: "https://id.example.com"
+ingress_oidc_cookie_domain: ".example.com"
