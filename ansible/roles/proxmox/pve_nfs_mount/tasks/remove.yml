@@ -1,0 +1,48 @@
+---
+- name: Derive systemd unit names from mountpoints
+  ansible.builtin.command:
+    cmd: "systemd-escape --path {{ item.mountpoint }}"
+  loop: "{{ pve_nfs_mounts }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+  register: _nfs_unit_names
+  changed_when: false
+
+- name: Build mount definition list with unit names
+  ansible.builtin.set_fact:
+    _nfs_mount_defs: >-
+      {{ _nfs_mount_defs | default([]) + [item.item | combine({'unit_name': item.stdout | trim})] }}
+  loop: "{{ _nfs_unit_names.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Stop and disable automount units
+  ansible.builtin.systemd:
+    name: "{{ item.unit_name }}.automount"
+    enabled: false
+    state: stopped
+  loop: "{{ _nfs_mount_defs }}"
+  failed_when: false
+
+- name: Stop mount units
+  ansible.builtin.systemd:
+    name: "{{ item.unit_name }}.mount"
+    state: stopped
+  loop: "{{ _nfs_mount_defs }}"
+  failed_when: false
+
+- name: Remove automount unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item.unit_name }}.automount"
+    state: absent
+  loop: "{{ _nfs_mount_defs }}"
+
+- name: Remove mount unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item.unit_name }}.mount"
+    state: absent
+  loop: "{{ _nfs_mount_defs }}"
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true

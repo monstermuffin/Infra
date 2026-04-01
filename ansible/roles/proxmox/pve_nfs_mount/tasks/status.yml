@@ -1,0 +1,44 @@
+---
+- name: Check active NFS mounts
+  ansible.builtin.command:
+    cmd: findmnt -t nfs,nfs4 --noheadings --output TARGET,SOURCE,OPTIONS
+  register: _nfs_active_mounts
+  changed_when: false
+  failed_when: false
+
+- name: Derive systemd unit names from mountpoints
+  ansible.builtin.command:
+    cmd: "systemd-escape --path {{ item.mountpoint }}"
+  loop: "{{ pve_nfs_mounts }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+  register: _nfs_unit_names
+  changed_when: false
+
+- name: Gather service facts for automount units
+  ansible.builtin.service_facts:
+
+- name: Build automount unit status
+  ansible.builtin.set_fact:
+    _nfs_automount_status: >-
+      {{ _nfs_unit_names.results
+         | map(attribute='stdout')
+         | map('trim')
+         | map('regex_replace', '$', '.automount')
+         | list }}
+
+- name: Display NFS mount status
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NFS Mount Status"
+      - "=========================================="
+      - "Active NFS mounts:"
+      - "{{ _nfs_active_mounts.stdout_lines | default(['  (none)']) }}"
+      - ""
+      - "Automount units:"
+      - >-
+        {% for unit in _nfs_automount_status %}
+        {{ unit }}: {{ ansible_facts.services[unit].state | default('not found') }}
+        {% endfor %}
+      - "=========================================="

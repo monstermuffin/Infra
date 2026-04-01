@@ -1,0 +1,132 @@
+---
+- name: Create mountpoint directories
+  ansible.builtin.file:
+    path: "{{ item.mountpoint }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0775"
+  loop: "{{ pve_nfs_mounts }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+
+- name: Derive systemd unit names from mountpoints
+  ansible.builtin.command:
+    cmd: "systemd-escape --path {{ item.mountpoint }}"
+  loop: "{{ pve_nfs_mounts }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+  register: _nfs_unit_names
+  changed_when: false
+
+- name: Build mount definition list with unit names
+  ansible.builtin.set_fact:
+    _nfs_mount_defs: >-
+      {{ _nfs_mount_defs | default([]) + [item.item | combine({'unit_name': item.stdout | trim})] }}
+  loop: "{{ _nfs_unit_names.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Template systemd mount units
+  ansible.builtin.template:
+    src: nfs.mount.j2
+    dest: "/etc/systemd/system/{{ item.unit_name }}.mount"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _nfs_mount_defs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd daemon
+
+- name: Template systemd automount units
+  ansible.builtin.template:
+    src: nfs.automount.j2
+    dest: "/etc/systemd/system/{{ item.unit_name }}.automount"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _nfs_mount_defs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd daemon
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start automount units
+  ansible.builtin.systemd:
+    name: "{{ item.unit_name }}.automount"
+    enabled: true
+    state: started
+    daemon_reload: false
+  loop: "{{ _nfs_mount_defs }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Verify mounts are accessible
+  ansible.builtin.command:
+    cmd: "ls {{ item.mountpoint }}"
+  loop: "{{ _nfs_mount_defs }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+  changed_when: false
+  register: _nfs_mount_verify
+  failed_when: _nfs_mount_verify.rc != 0
+
+- name: Find existing role-managed NFS mount units
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail &&
+      grep -rl 'Ansible managed' /etc/systemd/system/*.mount 2>/dev/null
+      | xargs -r grep -l 'Type=nfs'
+      | xargs -r -n1 basename
+      | sed 's/\.mount$//'
+    executable: /bin/bash
+  register: _nfs_existing_units
+  changed_when: false
+  failed_when: false
+
+- name: Determine orphaned NFS mount units
+  ansible.builtin.set_fact:
+    _nfs_orphan_units: >-
+      {{ (_nfs_existing_units.stdout_lines | default([]))
+         | difference(_nfs_mount_defs | map(attribute='unit_name') | list) }}
+
+- name: Stop and disable orphaned automount units
+  ansible.builtin.systemd:
+    name: "{{ item }}.automount"
+    enabled: false
+    state: stopped
+  loop: "{{ _nfs_orphan_units }}"
+  failed_when: false
+  when: _nfs_orphan_units | length > 0
+
+- name: Stop orphaned mount units
+  ansible.builtin.systemd:
+    name: "{{ item }}.mount"
+    state: stopped
+  loop: "{{ _nfs_orphan_units }}"
+  failed_when: false
+  when: _nfs_orphan_units | length > 0
+
+- name: Remove orphaned automount unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.automount"
+    state: absent
+  loop: "{{ _nfs_orphan_units }}"
+  notify: Reload systemd daemon
+  when: _nfs_orphan_units | length > 0
+
+- name: Remove orphaned mount unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.mount"
+    state: absent
+  loop: "{{ _nfs_orphan_units }}"
+  notify: Reload systemd daemon
+  when: _nfs_orphan_units | length > 0
+
+- name: Report orphan cleanup
+  ansible.builtin.debug:
+    msg: "Removed orphaned NFS mounts: {{ _nfs_orphan_units | join(', ') }}"
+  when: _nfs_orphan_units | length > 0

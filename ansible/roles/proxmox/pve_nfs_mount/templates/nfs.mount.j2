@@ -1,0 +1,26 @@
+{# Ansible managed #}
+{% set _merged_options = pve_nfs_default_options | combine(item.options | default({})) %}
+{% set _options_parts = [] %}
+{% for k, v in _merged_options.items() %}
+{%   if v is sameas true %}
+{%     set _ = _options_parts.append(k) %}
+{%   elif v is sameas false or v is none %}
+{%     set _ = None %}
+{%   else %}
+{%     set _ = _options_parts.append(k ~ '=' ~ v) %}
+{%   endif %}
+{% endfor %}
+[Unit]
+Description=NFS mount {{ item.name }} ({{ pve_nfs_sources[item.source].server }}:{{ pve_nfs_sources[item.source].export }})
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What={{ pve_nfs_sources[item.source].server }}:{{ pve_nfs_sources[item.source].export }}
+Where={{ item.mountpoint }}
+Type=nfs
+Options={{ _options_parts | join(',') }}
+TimeoutSec={{ pve_nfs_mount_timeout }}
+
+[Install]
+WantedBy=multi-user.target

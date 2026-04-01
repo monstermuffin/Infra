@@ -1,0 +1,27 @@
+---
+pve_nfs_enabled: false
+pve_nfs_install_utils: true
+pve_nfs_mount_timeout: 30
+
+# 0 = never unmount, required for host paths bind-mounted into LXCs
+pve_nfs_automount_timeout_idle: 0
+
+pve_nfs_default_options:
+  nfsvers: "4.2"
+  hard: true
+  noatime: true
+
+# Sources and mounts should be defined in host_vars/group_vars
+#
+# pve_nfs_sources:
+#   aah_fs02:
+#     server: "aah-fs02"
+#     export: "/mnt/pool/pbs-data"
+pve_nfs_sources: {}
+#
+# pve_nfs_mounts:
+#   - name: pbs-data
+#     source: aah_fs02
+#     mountpoint: "/mnt/aah-fs02/pbs-data"
+#     options: {}
+pve_nfs_mounts: []

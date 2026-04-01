@@ -1,0 +1,12 @@
+{# Ansible managed #}
+[Unit]
+Description=Automount {{ item.name }} ({{ pve_nfs_sources[item.source].server }}:{{ pve_nfs_sources[item.source].export }})
+After=network-online.target
+Wants=network-online.target
+
+[Automount]
+Where={{ item.mountpoint }}
+TimeoutIdleSec={{ pve_nfs_automount_timeout_idle }}
+
+[Install]
+WantedBy=multi-user.target
