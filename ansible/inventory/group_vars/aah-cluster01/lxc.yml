@@ -1,108 +1,26 @@
 ---
-# LXC defaults cluster wide
+# Cluster-wide LXC defaults. Overridable per-container in lxc_*.yml files.
 pve_lxc_default_ostemplate: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
 pve_lxc_default_storage: "local-zfs"
 pve_lxc_default_network_bridge: "vmbr1"
 
-# LXC container deployment
-# Node for initial placement and does not affect migration after initial placement
+# Override individual keys with `combine: ha: "{{ lxc_ha_default | combine({'max_restart': 3}) }}"`
+lxc_ha_default:
+  enabled: true
+  state: started
+  max_restart: 1
+  max_relocate: 1
 
-pve_lxcs:
-  pdm01:
-    vmid: 201
-    hostname: pdm01.aah.muffn.io
-    node: pve03
-    cores: 4
-    memory: 2048
-    swap: 512
-    disk: "32G"
-    network_ip: "10.82.2.201/24"
-    network_gw: "10.82.2.1"
-    network_vlan: 702
-    unprivileged: true
-    runtime: baremetal
-    tags:
-      - ansible
-      - site_aah
-      - baremetal_app
-      - app_pdm
-    features:
-      nesting: true
-      keyctl: false
-    ha:
-      enabled: true
-      state: started
-      max_restart: 1
-      max_relocate: 1
-    replication:
-      enabled: true
-      schedule: "*/15"
-      # rate: 50
-  sonarr01:
-    vmid: 111
-    hostname: sonarr01.aah.muffn.io
-    node: pve03
-    cores: 2
-    memory: 2048
-    swap: 512
-    disk: "16G"
-    network_ip: "10.82.10.111/24"
-    network_gw: "10.82.10.1"
-    network_vlan: 710
-    unprivileged: true
-    runtime: podman
-    tags:
-      - ansible
-      - site_aah
-      - podman_app
-      - app_sonarr
-    features:
-      nesting: true
-      keyctl: true
-    bind_mounts:
-      - host_path: /mnt/aah-fs01/media/tv
-        lxc_path: /mnt/tv
-        shared: true
-    ha:
-      enabled: true
-      state: started
-      max_restart: 1
-      max_relocate: 1
-    replication:
-      enabled: true
-      schedule: "*/15"
-      # rate: 50
-  radarr01:
-    vmid: 112
-    hostname: radarr01.aah.muffn.io
-    node: pve03
-    cores: 2
-    memory: 2048
-    swap: 512
-    disk: "16G"
-    network_ip: "10.82.10.112/24"
-    network_gw: "10.82.10.1"
-    network_vlan: 710
-    unprivileged: true
-    runtime: podman
-    tags:
-      - ansible
-      - site_aah
-      - podman_app
-      - app_radarr
-    features:
-      nesting: true
-      keyctl: true
-    bind_mounts:
-      - host_path: /mnt/aah-fs01/media/movies
-        lxc_path: /mnt/movies
-        shared: true
-    ha:
-      enabled: true
-      state: started
-      max_restart: 1
-      max_relocate: 1
-    replication:
-      enabled: true
-      schedule: "*/15"
-      # rate: 50
+lxc_replication_default:
+  enabled: true
+  schedule: "*/15"
+  # rate: 50
+
+lxc_features_podman:
+  nesting: true
+  keyctl: true
+
+lxc_features_docker:
+  nesting: true
+  keyctl: false
+

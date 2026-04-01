@@ -1,0 +1,142 @@
+---
+pve_lxcs_media:
+  sonarr01:
+    vmid: 111
+    hostname: sonarr01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "32G"
+    network_ip: "10.82.10.111/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_sonarr
+    features: "{{ lxc_features_podman }}"
+    bind_mounts:
+      - host_path: /mnt/aah-fs01/media/tv
+        lxc_path: /mnt/tv
+        shared: true
+      - host_path: /mnt/scratch/downloads
+        lxc_path: /mnt/downloads
+        shared: true
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
+  radarr01:
+    vmid: 112
+    hostname: radarr01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "32G"
+    network_ip: "10.82.10.112/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_radarr
+    features: "{{ lxc_features_podman }}"
+    bind_mounts:
+      - host_path: /mnt/aah-fs01/media/movies
+        lxc_path: /mnt/movies
+        shared: true
+      - host_path: /mnt/scratch/downloads
+        lxc_path: /mnt/downloads
+        shared: true
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
+  prowlarr01:
+    vmid: 114
+    hostname: prowlarr01.aah.muffn.io
+    node: pve03
+    cores: 1
+    memory: 1024
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.114/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_prowlarr
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
+  seerr01:
+    vmid: 115
+    hostname: seerr01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.115/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_seerr
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
+  tautulli01:
+    vmid: 116
+    hostname: tautulli01.aah.muffn.io
+    node: pve03
+    cores: 1
+    memory: 1024
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.116/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_tautulli
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
+  recyclarr01:
+    vmid: 118
+    hostname: recyclarr01.aah.muffn.io
+    node: pve03
+    cores: 1
+    memory: 1024
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.118/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_recyclarr
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
