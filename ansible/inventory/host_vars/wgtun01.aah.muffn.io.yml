@@ -1,0 +1,168 @@
+---
+proxmox_node: pve04.aah.muffn.io
+
+podman_enabled: true
+
+wgtun_gluetun_apikey: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38636635333563326533313762656262376462653735666137366538646364323837383231376335
+          3134343131353563303631333039343638393362623334620a333838313137656163346363326236
+          35666464336465303039383662616337633434303261626634336533653832663439626134666230
+          6661303139336332660a383030336663646435666334333635613861393335353761373866636333
+          62313935636435306162663365656436623330353062643361393365623364323635
+
+podman_apps:
+  gluetun:
+    enabled: true
+    image: ghcr.io/qdm12/gluetun
+    # renovate: datasource=docker depName=ghcr.io/qdm12/gluetun
+    tag: v3.41.1
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "5800:5800"   # firefox web ui
+      - "8081:8080"   # qbittorrent webui
+      - "8888:8888"   # gluetun http proxy
+    volumes:
+      - /opt/wgtun/gluetun:/gluetun
+    env:
+      VPN_SERVICE_PROVIDER: protonvpn
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37616138633264333736613866333162643466303730383866383864323962373463373935636165
+          3930663866323064323137373338323131656639353938660a353930656564623664653736613837
+          65396333656536393665666634346564363737363530613038363436323337383862623465326434
+          6632323664363830300a663736323363343739633235633666386434386434626364356336656238
+          64366438326535396266616333396437393164373163643235326561663138373636363833363866
+          6139303965306563666234616634616534366234393338393562
+      VPN_PORT_FORWARDING: "on"
+      VPN_PORT_FORWARDING_PROVIDER: protonvpn
+      PORT_FORWARD_ONLY: "on"
+      SERVER_COUNTRIES: Netherlands
+      GLUETUN_HTTP_CONTROL_SERVER_ENABLE: "on"
+      FIREWALL_OUTBOUND_SUBNETS: "10.82.0.0/16"
+      DNS_SERVER: "on"
+      DNS_UPSTREAM_RESOLVER_TYPE: dot
+      DNS_UPSTREAM_RESOLVERS: quad9
+      HTTPPROXY: "on"
+      HTTPPROXY_STEALTH: "on"
+      DISABLE_IPV6: "on"
+      FIREWALL_INPUT_PORTS: "8080,5800,8888"
+      TZ: Europe/London
+
+  qbittorrent:
+    enabled: true
+    image: ghcr.io/home-operations/qbittorrent
+    # renovate: datasource=docker depName=ghcr.io/home-operations/qbittorrent
+    tag: 5.1.4
+    network_mode: container:gluetun
+    after:
+      - gluetun.service
+    requires:
+      - gluetun.service
+    uid: 65534
+    gid: 65534
+    volumes:
+      - /opt/wgtun/qbittorrent:/config
+      - /mnt/incomplete:/incomplete
+      - /mnt/downloads:/downloads
+    env:
+      TZ: Europe/London
+      QBT_WEBUI_PORT: "8080"
+
+  firefox:
+    enabled: true
+    image: jlesage/firefox
+    # renovate: datasource=docker depName=jlesage/firefox
+    tag: v26.03.1
+    network_mode: container:gluetun
+    after:
+      - gluetun.service
+    requires:
+      - gluetun.service
+    security_label_disable: true
+    shm_size: 1g
+    volumes:
+      - /opt/wgtun/firefox:/config
+    env:
+      USER_ID: "0"
+      GROUP_ID: "0"
+      TZ: Europe/London
+
+  qsticky:
+    enabled: true
+    image: ghcr.io/monstermuffin/qsticky
+    # renovate: datasource=docker depName=ghcr.io/monstermuffin/qsticky
+    tag: latest
+    network_mode: container:gluetun
+    after:
+      - gluetun.service
+      - qbittorrent.service
+    requires:
+      - gluetun.service
+      - qbittorrent.service
+    restart: on-failure
+    env:
+      QBITTORRENT_HOST: localhost
+      QBITTORRENT_PORT: "8080"
+      QBITTORRENT_USER: admin
+      QBITTORRENT_PASS: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38306635383637353964373835666162373232383531343534663032346439366338653731366262
+          3933383431626161346237613130333839666465373561640a363133373538656535393233663038
+          32313233646532373532356435353831363466306662343865666331356161333830356533303430
+          6465343265333464370a323730356431623061623230333434366462663361643731333236323734
+          65383030653764626661393933383338393031353136643337626634323132623135613866386635
+          6130393131313566323735323936353537356663366138333334
+      QBITTORRENT_HTTPS: "false"
+      GLUETUN_HOST: localhost
+      GLUETUN_PORT: "8000"
+      GLUETUN_AUTH_TYPE: apikey
+      GLUETUN_APIKEY: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38636635333563326533313762656262376462653735666137366538646364323837383231376335
+          3134343131353563303631333039343638393362623334620a333838313137656163346363326236
+          35666464336465303039383662616337633434303261626634336533653832663439626134666230
+          6661303139336332660a383030336663646435666334333635613861393335353761373866636333
+          62313935636435306162663365656436623330353062643361393365623364323635
+      LOG_LEVEL: INFO
+
+  filebrowser:
+    enabled: true
+    image: ghcr.io/gtsteffaniak/filebrowser
+    # renovate: datasource=docker depName=ghcr.io/gtsteffaniak/filebrowser
+    tag: 1.2.3-stable
+    port: 80
+    volumes:
+      - /opt/wgtun/filebrowser:/config
+      - /mnt/downloads:/srv
+
+  qbittorrent-exporter:
+    enabled: true
+    image: ghcr.io/esanchezm/prometheus-qbittorrent-exporter
+    # renovate: datasource=docker depName=ghcr.io/esanchezm/prometheus-qbittorrent-exporter
+    tag: latest
+    port: 9171
+    after:
+      - qbittorrent.service
+    requires:
+      - qbittorrent.service
+    restart: on-failure
+    restart_sec: 10
+    env:
+      QBITTORRENT_HOST: 10.82.10.117
+      QBITTORRENT_PORT: "8081"
+      QBITTORRENT_USERNAME: admin
+      QBITTORRENT_PASSWORD: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38306635383637353964373835666162373232383531343534663032346439366338653731366262
+          3933383431626161346237613130333839666465373561640a363133373538656535393233663038
+          32313233646532373532356435353831363466306662343865666331356161333830356533303430
+          6465343265333464370a323730356431623061623230333434366462663361643731333236323734
+          65383030653764626661393933383338393031353136643337626634323132623135613866386635
+          6130393131313566323735323936353537356663366138333334
+      EXPORTER_PORT: "9171"
+      TZ: Europe/London

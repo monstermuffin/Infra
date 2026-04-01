@@ -1,0 +1,14 @@
+---
+proxmox_node: pve04.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  vlmcsd:
+    enabled: true
+    image: mikolatero/vlmcsd
+    # renovate: datasource=docker depName=mikolatero/vlmcsd
+    tag: latest
+    port: 1688
+    env:
+      TZ: Europe/London

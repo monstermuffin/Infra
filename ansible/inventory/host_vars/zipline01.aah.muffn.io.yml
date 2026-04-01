@@ -1,0 +1,72 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_networks:
+  zipline: {}
+
+zipline_core_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36666533363734626333633763323461323166646366386237653335326662356562663239343065
+          3361393764343735666532633363653230353536393731380a623035346237306538393062356335
+          34383434316463613632666434393233393833326463313235306331666130333861656262636435
+          3537383233653162620a366439666132633237303266646135316134373465383039336535366430
+          62316436623964373134643334326566613333316231373166383138393032316664323834666435
+          3731613837306633326539613638386338633563346236343366
+
+zipline_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64373438666366373739373635616666306632336431336431333337303536363263636433623539
+          6636373939393932626264636139393837396165303063350a646333636563663637346135373632
+          61636436316232376563616139373266646334346332313034656161663730363431653730666639
+          3165303734383336610a363936316531656437356432623166363635623738666533326566313162
+          32303531363036326133343539353265353238316130333365623936313864613837316437616664
+          3532383634343635363863383733313764623435316533363538
+
+podman_apps:
+  zipline-postgres:
+    enabled: true
+    image: postgres
+    # renovate: datasource=docker depName=postgres
+    tag: "16"
+    container_name: zipline-postgres
+    network: zipline
+    uid: 999
+    gid: 999
+    volumes:
+      - /opt/zipline/postgres:/var/lib/postgresql/data
+    env:
+      POSTGRES_USER: zipline
+      POSTGRES_PASSWORD: "{{ zipline_db_password | trim }}"
+      POSTGRES_DB: zipline
+      PGDATA: /var/lib/postgresql/data
+
+  zipline:
+    enabled: true
+    image: ghcr.io/diced/zipline
+    # renovate: datasource=docker depName=ghcr.io/diced/zipline
+    tag: latest
+    port: 3000
+    user: "989:987"
+    uid: 989
+    gid: 987
+    network: zipline
+    after:
+      - zipline-postgres.service
+    requires:
+      - zipline-postgres.service
+    volumes:
+      - /opt/zipline/uploads:/zipline/uploads
+      - /opt/zipline/public:/zipline/public
+      - /opt/zipline/themes:/zipline/themes
+    env:
+      TZ: Europe/London
+      CORE_SECRET: "{{ zipline_core_secret | trim }}"
+      DATABASE_URL: "postgres://zipline:{{ zipline_db_password | trim }}@zipline-postgres:5432/zipline"
+      CORE_RETURN_HTTPS: "true"
+      EXIF_ENABLED: "true"
+      EXIF_REMOVE_GPS: "true"
+      DATASOURCE_LOCAL_DIRECTORY: /zipline/uploads
+      DEBUG: zipline
+      NODE_ENV: production

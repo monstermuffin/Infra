@@ -1,0 +1,20 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+# podman_enabled: true
+
+# podman_apps:
+#   rembg:
+#     enabled: true
+#     image: ghcr.io/home-operations/rembg
+#     tag: rolling
+#     port: 37285
+#     uid: 65534
+#     gid: 65534
+#     volumes:
+#       - /opt/rembg/config:/config
+#     # devices:
+#     #   - /dev/dri/renderD128
+#     #   - /dev/dri/card0
+#     env:
+#       TZ: Europe/London

@@ -1,0 +1,29 @@
+---
+proxmox_node: pve02.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  plex:
+    enabled: true
+    image: ghcr.io/home-operations/plex
+    # renovate: datasource=docker depName=ghcr.io/home-operations/plex
+    tag: 1.43.0.10492
+    port: 32400
+    uid: 65534
+    gid: 65534
+    network_mode: host
+    tmpfs:
+      - /transcode
+    volumes:
+      - /opt/plex/config:/config
+      - /mnt/media/movies:/movies
+      - /mnt/media/tv:/tv
+      - /mnt/media/music:/music
+      - /mnt/media/youtube:/youtube
+    devices:
+      - /dev/dri/renderD128
+      - /dev/dri/card0
+    env:
+      TZ: Europe/London
+      # PLEX_CLAIM_TOKEN: claim-xxxxxx

@@ -1,0 +1,73 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_networks:
+  grimmory: {}
+
+grimmory_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          35386139623764346565613664333630353032343834303734306462623833653030623662353833
+          3762373633666630373362656538353837663830373632350a353464636331393130326462393438
+          30623566393163643961353161363232336231613663333562613439336131356230393964646630
+          6332356563306538360a353135383834313434653932643232636562373432353839306566373162
+          32383934323838626331306631636461396237666430646461633438656237636533343532346135
+          6261323733636339333931646162643735396230643964376130
+
+grimmory_mysql_root_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33666438383033613162396334303838643539303365643839643631643233623661356239626430
+          3661353930356665373163316662323430643330313138650a366132646238626131363561373937
+          33333364393238623232393637313466346230343231376262306161336563376232336533333837
+          3661336135666563390a666633363339353934386361373037356461386261616338313535336236
+          37653932386338353837326630373437636537636130663531323032366530346636326632353135
+          3132323331633734386236346230396165636562636634353863
+
+podman_apps:
+  grimmory-db:
+    enabled: true
+    image: mariadb
+    # renovate: datasource=docker depName=mariadb
+    tag: "11"
+    container_name: grimmory-db
+    network: grimmory
+    uid: 999
+    gid: 999
+    volumes:
+      - /opt/grimmory/mariadb:/var/lib/mysql
+    env:
+      TZ: Europe/London
+      MYSQL_ROOT_PASSWORD: "{{ grimmory_mysql_root_password | trim }}"
+      MYSQL_DATABASE: grimmory
+      MYSQL_USER: grimmory
+      MYSQL_PASSWORD: "{{ grimmory_db_password | trim }}"
+
+  grimmory:
+    enabled: true
+    image: ghcr.io/grimmory-tools/grimmory
+    # renovate: datasource=docker depName=ghcr.io/grimmory-tools/grimmory
+    tag: v2.3.0
+    container_name: grimmory
+    port: 6060
+    uid: 982
+    gid: 981
+    network: grimmory
+    after:
+      - grimmory-db.service
+    requires:
+      - grimmory-db.service
+    volumes:
+      - /opt/grimmory/data:/app/data
+      - /opt/grimmory/books:/books
+      - /bookdrop:/bookdrop
+    env:
+      USER_ID: "982"
+      GROUP_ID: "981"
+      TZ: Europe/London
+      DATABASE_URL: "jdbc:mariadb://grimmory-db:3306/grimmory?user=grimmory&password={{ grimmory_db_password | trim }}&useUnicode=true&characterEncoding=utf8&useSSL=false"
+      DATABASE_USERNAME: grimmory
+      DATABASE_PASSWORD: "{{ grimmory_db_password | trim }}"
+      LOG_LEVEL: INFO
+      ROOT_LOG_LEVEL: INFO
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"

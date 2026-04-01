@@ -1,0 +1,19 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  sabnzbd:
+    enabled: true
+    image: ghcr.io/home-operations/sabnzbd
+    # renovate: datasource=docker depName=ghcr.io/home-operations/sabnzbd
+    tag: 4.5.5
+    port: 8080
+    uid: 65534
+    gid: 65533
+    volumes:
+      - /opt/sabnzbd:/config
+      - /mnt/downloads:/downloads
+    env:
+      TZ: Europe/London

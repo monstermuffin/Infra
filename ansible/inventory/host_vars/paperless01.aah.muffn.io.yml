@@ -1,0 +1,86 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_networks:
+  paperless: {}
+
+paperless_secret_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64653436663332346662346234626165356236346432303038663865343939336131316138336130
+          3765643765336539666533613431383366616533616439360a386366333761646265613333623361
+          37623466313662303938343066356530663566616461366366396564313564646531323835666133
+          3663333761396331340a653238303965356637346662313739633436653864626562643037613762
+          39656461323034666633313135666635373862313064313665323966373536346432343236393231
+          36376630333437623231653734396631383239323134363136653262313666383366623239666138
+          30663632313133636566376465643830653837656565373066303938333436303963613636623134
+          39633061343065373532
+
+paperless_oidc_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31383932626238323239656665386465306363656663626163323135306235623539316538376635
+          3139326462626132323830383564643235626161306166310a663038366462373866353039666634
+          31646365393563656336626666626162646464353965643863646532393932326132353166643539
+          3231666461326437380a336639323264663231393863623831323834303662376434636662376231
+          62363439636664643535303433303434643065343862323434356232326464643931616663333730
+          6236643161306639653430323232663936363838613937636532
+
+podman_apps:
+  paperless-redis:
+    enabled: true
+    image: redis
+    # renovate: datasource=docker depName=redis
+    tag: "7"
+    container_name: paperless-redis
+    network: paperless
+    uid: 999
+    gid: 999
+    volumes:
+      - /opt/paperless/redis:/data
+
+  paperless:
+    enabled: true
+    image: ghcr.io/paperless-ngx/paperless-ngx
+    # renovate: datasource=docker depName=ghcr.io/paperless-ngx/paperless-ngx
+    tag: latest
+    port: 8084
+    container_port: 8000
+    uid: 993
+    gid: 991
+    network: paperless
+    after:
+      - paperless-redis.service
+    requires:
+      - paperless-redis.service
+    volumes:
+      - /opt/paperless/data:/usr/src/paperless/data
+      - /opt/paperless/media:/usr/src/paperless/media
+      - /opt/paperless/export:/usr/src/paperless/export
+      - /opt/paperless/consume:/usr/src/paperless/consume
+    env:
+      USERMAP_UID: "993"
+      USERMAP_GID: "991"
+      TZ: Europe/London
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_SECRET_KEY: "{{ paperless_secret_key | trim }}"
+      PAPERLESS_TIME_ZONE: Europe/London
+      PAPERLESS_URL: https://paperless.jovion.io
+      PAPERLESS_OCR_USER_ARGS: '{"continue_on_soft_render_error": true}'
+      PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: "{{ {
+        'openid_connect': {
+          'APPS': [
+            {
+              'provider_id': 'pocketid',
+              'name': 'Pocket ID',
+              'client_id': 'b5573dac-b5df-4151-a62f-b78de811fd47',
+              'secret': paperless_oidc_secret | trim,
+              'settings': {
+                'server_url': 'https://id.muffn.io/.well-known/openid-configuration'
+              }
+            }
+          ],
+          'OAUTH_PKCE_ENABLED': 'True'
+        }
+      } | to_json }}"

@@ -19,7 +19,15 @@ want_facts: true
 type: lxc
 
 compose:
-  ansible_host: proxmox_net0.ip | default('') | regex_replace('/.*', '')
+  ansible_host: >-
+    (proxmox_lxc_interfaces | default([])
+     | selectattr('name', 'ne', 'lo')
+     | selectattr('inet', 'defined')
+     | map(attribute='inet')
+     | first | default('')
+     | regex_replace('/.*', ''))
+    if (proxmox_net0.ip | default('dhcp')) == 'dhcp'
+    else (proxmox_net0.ip | regex_replace('/.*', ''))
   ansible_user: root
 
 keyed_groups:

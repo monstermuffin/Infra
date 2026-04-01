@@ -1,20 +1,20 @@
 ---
+proxmox_node: pve03.aah.muffn.io
+
 podman_enabled: true
 
-# LXC App Config
-proxmox_vmid: 112
-proxmox_node: pve03.aah.muffn.io
-proxmox_os: "Debian 13 (Trixie)"
-proxmox_runtime: "Podman rootful (system Quadlet)"
-
-radarr_enabled: true
-
-radarr_image: ghcr.io/home-operations/radarr
-radarr_image_tag: rolling
-
-radarr_timezone: Europe/London
-radarr_container_port: 7878
-
-radarr_config_dir: /opt/radarr/config
-radarr_movies_dir: /movies
-radarr_downloads_dir: /opt/radarr/downloads
+podman_apps:
+  radarr:
+    enabled: true
+    image: ghcr.io/home-operations/radarr
+    # renovate: datasource=docker depName=ghcr.io/home-operations/radarr
+    tag: 6.1.2.10359
+    port: 7878
+    uid: 65534
+    gid: 65533
+    volumes:
+      - /opt/radarr:/config
+      - /mnt/movies:/movies
+      - /mnt/downloads:/downloads
+    env:
+      TZ: Europe/London

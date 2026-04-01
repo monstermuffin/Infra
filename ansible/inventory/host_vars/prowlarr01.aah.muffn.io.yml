@@ -1,0 +1,18 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  prowlarr:
+    enabled: true
+    image: ghcr.io/home-operations/prowlarr
+    # renovate: datasource=docker depName=ghcr.io/home-operations/prowlarr
+    tag: 2.3.5.5318
+    port: 9696
+    uid: 65534
+    gid: 65533
+    volumes:
+      - /opt/prowlarr:/config
+    env:
+      TZ: Europe/London

@@ -1,0 +1,16 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  pulse:
+    enabled: true
+    # renovate: datasource=docker depName=ghcr.io/rcourtman/pulse
+    image: ghcr.io/rcourtman/pulse
+    tag: 5.1.26
+    port: 7655
+    volumes:
+      - /opt/pulse:/data
+    env:
+      TZ: Europe/London

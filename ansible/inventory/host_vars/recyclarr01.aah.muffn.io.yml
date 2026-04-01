@@ -1,0 +1,21 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  recyclarr:
+    enabled: true
+    display_name: Recyclarr
+    image: ghcr.io/recyclarr/recyclarr
+    # renovate: datasource=docker depName=ghcr.io/recyclarr/recyclarr
+    tag: "8"
+    container_name: recyclarr
+    uid: 65534
+    gid: 65533
+    user: 65534:65533
+    volumes:
+      - /opt/recyclarr:/config
+    env:
+      TZ: Europe/London
+      RECYCLARR_CREATE_CONFIG: "true"

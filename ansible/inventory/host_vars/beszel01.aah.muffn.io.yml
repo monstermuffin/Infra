@@ -1,0 +1,18 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  beszel:
+    enabled: true
+    image: henrygd/beszel
+    # renovate: datasource=docker depName=henrygd/beszel
+    tag: "0.17.0"
+    port: 8090
+    volumes:
+      - /opt/beszel:/beszel_data
+    env:
+      DISABLE_PASSWORD_AUTH: true
+      USER_CREATION: "true"
+      TZ: Europe/London

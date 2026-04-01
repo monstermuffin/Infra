@@ -1,0 +1,87 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_networks:
+  changedetection: {}
+
+podman_apps:
+  playwright_changedetection:
+    enabled: true
+    image: dgtlmoon/sockpuppetbrowser
+    # renovate: datasource=docker depName=dgtlmoon/sockpuppetbrowser
+    tag: latest
+    container_name: playwright_changedetection
+    network: changedetection
+    env:
+      SCREEN_WIDTH: "1920"
+      SCREEN_HEIGHT: "1024"
+      SCREEN_DEPTH: "16"
+      MAX_CONCURRENT_CHROME_PROCESSES: "10"
+      CHROMIUM_FLAGS: --disable-software-rasterizer --disable-dev-shm-usage
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      LOG_LEVEL: DEBUG
+
+  chrome_changedetection:
+    enabled: true
+    image: selenium/standalone-chrome
+    # renovate: datasource=docker depName=selenium/standalone-chrome
+    tag: latest
+    container_name: chrome_changedetection
+    network: changedetection
+    shm_size: 2g
+    env:
+      SE_NODE_MAX_SESSIONS: "4"
+      SE_NODE_SESSION_TIMEOUT: "300"
+      SE_START_XVFB: "true"
+      SE_START_VNC: "true"
+      SE_START_NO_VNC: "true"
+      SE_SCREEN_WIDTH: "1920"
+      SE_SCREEN_HEIGHT: "1080"
+      SE_SCREEN_DEPTH: "24"
+      TZ: UTC
+      SE_BIND_HOST: "false"
+      SE_ENABLE_TLS: "false"
+      SE_NODE_RELAY_ONLY: "true"
+      SE_OFFLINE: "true"
+      SE_NODE_BROWSER_VERSION: stable
+      SE_NODE_PLATFORM_NAME: Linux
+      SE_NODE_DELETE_SESSION_ON_UI: "true"
+      SE_NO_VNC_PORT: "7900"
+      SE_VNC_PORT: "5900"
+      DISPLAY: :99.0
+      SE_NODE_ENABLE_MANAGED_DOWNLOADS: "true"
+      SE_SESSION_REQUEST_TIMEOUT: "300"
+      SE_SESSION_RETRY_INTERVAL: "15"
+      SE_HEALTHCHECK_INTERVAL: "120"
+      SE_RELAX_CHECKS: "true"
+
+  changedetection-io:
+    enabled: true
+    image: dgtlmoon/changedetection.io
+    # renovate: datasource=docker depName=dgtlmoon/changedetection.io
+    tag: latest
+    container_name: changedetection-io
+    port: 5011
+    container_port: 5000
+    uid: 987
+    gid: 986
+    network: changedetection
+    after:
+      - playwright_changedetection.service
+      - chrome_changedetection.service
+    requires:
+      - playwright_changedetection.service
+      - chrome_changedetection.service
+    volumes:
+      - /opt/changedetection:/datastore
+    env:
+      PUID: "987"
+      PGID: "986"
+      TZ: Europe/London
+      BASE_URL: https://changedetection.muffn.io
+      HIDE_REFERER: "True"
+      WEBDRIVER_URL: http://chrome_changedetection:4444/wd/hub
+      PLAYWRIGHT_DRIVER_URL: ws://playwright_changedetection:3000

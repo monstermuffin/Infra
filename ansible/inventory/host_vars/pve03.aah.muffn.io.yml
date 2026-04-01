@@ -2,6 +2,14 @@
 pve_system_hostname: pve03
 pve_pocketid_enabled: true
 
+pve_scratch_drives:
+  - device: /dev/disk/by-id/wwn-0x500253884013a97d
+    mount: /mnt/scratch0
+  - device: /dev/disk/by-id/wwn-0x50025388402a01d3
+    mount: /mnt/scratch1
+  - device: /dev/disk/by-id/wwn-0x5002538d419b8c30
+    mount: /mnt/scratch2
+
 # /etc/hosts — corosync ring IP
 pve_system_hosts_ip: "172.29.82.1"
 pve_system_cluster_peers:

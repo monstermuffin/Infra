@@ -1,0 +1,22 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  privatebin:
+    enabled: true
+    image: privatebin/nginx-fpm-alpine
+    # renovate: datasource=docker depName=privatebin/nginx-fpm-alpine
+    tag: "2.0.3"
+    port: 8080
+    user: "984:983"
+    uid: 984
+    gid: 983
+    volumes:
+      - /opt/privatebin/data:/srv/data
+      - /opt/privatebin/cfg/conf.php:/srv/cfg/conf.php:ro
+    env:
+      TZ: Europe/London
+      PHP_TZ: Europe/London
+      CONFIG_PATH: /srv/cfg

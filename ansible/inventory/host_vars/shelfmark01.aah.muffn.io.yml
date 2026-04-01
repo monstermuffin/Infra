@@ -1,0 +1,25 @@
+---
+proxmox_node: pve03.aah.muffn.io
+
+podman_enabled: true
+
+podman_apps:
+  shelfmark:
+    enabled: true
+    image: ghcr.io/calibrain/shelfmark
+    # renovate: datasource=docker depName=ghcr.io/calibrain/shelfmark
+    tag: latest
+    port: 8084
+    uid: 982
+    gid: 981
+    volumes:
+      - /opt/shelfmark:/config
+      - /books:/books
+    env:
+      TZ: Europe/London
+      PUID: "982"
+      PGID: "981"
+      FLASK_PORT: "8084"
+      INGEST_DIR: /books
+      SEARCH_MODE: direct
+      USING_TOR: "false"
