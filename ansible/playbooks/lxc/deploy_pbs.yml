@@ -1,0 +1,23 @@
+---
+# Deploy Proxmox Backup Server into the dedicated PBS LXC.
+#
+# Tags:
+#   repo      — configure Proxmox PBS apt repository only
+#   install   — install PBS packages only
+#   service   — manage PBS services only
+#   auth      — bootstrap PBS admin login only
+
+- name: Deploy Proxmox Backup Server
+  hosts: "{{ target | default('tag_app_pbs') }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: lxc/base
+      tags:
+        - base
+        - setup
+    - role: apps/baremetal/pbs
+      tags:
+        - pbs
+        - deploy

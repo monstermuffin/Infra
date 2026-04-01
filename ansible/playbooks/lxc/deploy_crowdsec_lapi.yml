@@ -1,0 +1,27 @@
+---
+# Deploy CrowdSec LAPI + PostgreSQL into the dedicated CrowdSec LXC.
+
+- name: Deploy CrowdSec LAPI
+  hosts: "{{ target | default('tag_app_crowdsec') }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: lxc/base
+      tags:
+        - base
+        - setup
+    - role: apps/baremetal/crowdsec_lapi
+      tags:
+        - crowdsec
+        - deploy
+    - role: podman
+      when: podman_enabled | default(false)
+      tags:
+        - podman
+        - install
+    - role: apps/podman_app
+      when: podman_enabled | default(false)
+      tags:
+        - app
+        - deploy

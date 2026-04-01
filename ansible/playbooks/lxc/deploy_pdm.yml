@@ -1,0 +1,18 @@
+---
+# Deploy Proxmox Datacenter Manager (PDM) bare metal inside an LXC container.
+#
+# Tags:
+#   repo      — configure Proxmox apt repository only
+#   install   — install PDM packages only
+#   service   — manage PDM service only
+
+- name: Deploy Proxmox Datacenter Manager
+  hosts: "{{ pdm_host | default('tag_app_pdm') }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: apps/baremetal/pdm
+      tags:
+        - pdm
+        - deploy
