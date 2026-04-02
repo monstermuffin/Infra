@@ -43,12 +43,12 @@ pve_cifs_sources:
 
 # Share mounts
 pve_cifs_mounts:
-    - name: media
-      source: aah_fs01
-      share: "media-share"
-      mountpoint: "/mnt/aah-fs01/media"
+  - name: media
+    source: aah_fs01
+    share: "media-share"
+    mountpoint: "/mnt/aah-fs01/media"
 
-    - name: downloads
-      source: aah_fs02
-      share: "download"
-      mountpoint: "/mnt/aah-fs02/torrent-downloads"
+  - name: downloads
+    source: aah_fs02
+    share: "download"
+    mountpoint: "/mnt/aah-fs02/torrent-downloads"

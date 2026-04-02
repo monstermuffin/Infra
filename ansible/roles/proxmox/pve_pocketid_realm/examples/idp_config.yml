@@ -3,7 +3,7 @@
 
 pve_pocketid_issuer_url: "https://auth.muffn.io"
 pve_pocketid_client_id: "proxmox-cluster"
-pve_pocketid_client_secret: !vault |
+pve_pocketid_client_secret: "<replace-with-vault-secret>"
 
 pve_pocketid_realm_id: "pocketid"
 pve_pocketid_realm_comment: "Pocket ID OIDC Authentication"

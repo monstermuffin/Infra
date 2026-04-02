@@ -46,6 +46,7 @@ pve_lxcs_appmisc:
     features: "{{ lxc_features_podman }}"
     ha: "{{ lxc_ha_default }}"
     replication: "{{ lxc_replication_default }}"
+
   grimmory01:
     vmid: 123
     hostname: grimmory01.aah.muffn.io

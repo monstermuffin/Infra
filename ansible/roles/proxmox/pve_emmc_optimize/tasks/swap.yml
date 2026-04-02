@@ -63,4 +63,7 @@
 
 - name: Display swap optimization results
   ansible.builtin.debug:
-    msg: "Swap disabled (devices: {{ _swap_devices.stdout_lines | default(['none']) | join(', ') }}, LV removed: {{ _swap_lv.stdout | default('none') }}, swappiness: 0)"
+    msg: >-
+      Swap disabled (devices:
+      {{ _swap_devices.stdout_lines | default(['none']) | join(', ') }},
+      LV removed: {{ _swap_lv.stdout | default('none') }}, swappiness: 0)

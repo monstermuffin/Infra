@@ -19,8 +19,6 @@ lxc_replication_default:
 lxc_features_podman:
   nesting: true
   keyctl: true
-
 lxc_features_docker:
   nesting: true
   keyctl: false
-

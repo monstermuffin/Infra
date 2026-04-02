@@ -69,6 +69,7 @@
     opts: "defaults,noatime,nodiratime"
 
 - name: Sync existing logs to new location
+  # noqa: command-instead-of-module
   ansible.builtin.shell: |
     rsync -avAXx /var/log/ /var/log.new/
   args:
@@ -128,4 +129,6 @@
 
 - name: Display log relocation results
   ansible.builtin.debug:
-    msg: "Logs relocated: /var/log -> {{ pve_emmc_optimize_logs_disk }} ({{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }})"
+    msg: >-
+      Logs relocated: /var/log -> {{ pve_emmc_optimize_logs_disk }}
+      ({{ _logs_fs_type.stdout | default(pve_emmc_optimize_logs_fstype) }})

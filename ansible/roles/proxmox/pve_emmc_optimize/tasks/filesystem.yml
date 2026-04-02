@@ -24,7 +24,10 @@
   ansible.builtin.debug:
     msg: |
       Current root filesystem mount options: {{ _root_options }}
-      Will add: {% if _needs_noatime %}noatime {% endif %}{% if _needs_nodiratime %}nodiratime {% endif %}{% if _needs_commit %}commit={{ pve_emmc_optimize_commit_interval }}{% endif %}
+      Will add:
+      {% if _needs_noatime %}noatime {% endif %}
+      {% if _needs_nodiratime %}nodiratime {% endif %}
+      {% if _needs_commit %}commit={{ pve_emmc_optimize_commit_interval }}{% endif %}
 
 - name: Backup /etc/fstab
   ansible.builtin.copy:
@@ -78,9 +81,11 @@
   when: _needs_noatime or _needs_nodiratime or _needs_commit
 
 - name: Remount root filesystem with new options
-  ansible.builtin.command: mount -o remount,{{ _optimized_options }} /
+  ansible.posix.mount:
+    path: /
+    state: remounted
+    opts: "{{ _optimized_options }}"
   when: _needs_noatime or _needs_nodiratime or _needs_commit
-  changed_when: true
 
 - name: Verify new mount options
   ansible.builtin.shell: |
@@ -93,4 +98,6 @@
 
 - name: Display filesystem optimization results
   ansible.builtin.debug:
-    msg: "FS optimized ({{ _root_device }}): {{ _root_options }} -> {{ _new_root_mount.stdout.split('(')[1].split(')')[0] }}"
+    msg: >-
+      FS optimized ({{ _root_device }}): {{ _root_options }} ->
+      {{ _new_root_mount.stdout.split('(')[1].split(')')[0] }}

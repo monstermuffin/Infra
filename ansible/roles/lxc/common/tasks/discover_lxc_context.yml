@@ -12,7 +12,10 @@
 
 - name: "LXC context | Read VMID from cgroup"
   ansible.builtin.shell: |
+    set -o pipefail
     grep -oP '(?<=/lxc/)\d+' /proc/self/cgroup | head -1
+  args:
+    executable: /bin/bash
   register: _cgroup_vmid
   changed_when: false
   when: proxmox_vmid is not defined

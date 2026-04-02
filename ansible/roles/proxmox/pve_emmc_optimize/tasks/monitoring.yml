@@ -71,8 +71,23 @@
       size_gb: "{{ (_emmc_size_bytes.stdout | default(0) | int / 1024 / 1024 / 1024) | round(2) }}"
       lifetime_writes_tb: "{{ (_lifetime_writes_kb.stdout | default(0) | int / 1024 / 1024 / 1024) | round(2) }}"
       filesystem_created: "{{ _fs_created.stdout | default('unknown') }}"
-      estimated_total_writes_tb: "{{ ((_emmc_size_bytes.stdout | default(0) | int / 1024 / 1024 / 1024) * pve_emmc_optimize_pe_cycles) | round(2) }}"
-      percent_used: "{{ ((_lifetime_writes_kb.stdout | default(0) | int / 1024 / 1024 / 1024) / ((_emmc_size_bytes.stdout | default(1) | int / 1024 / 1024 / 1024) * pve_emmc_optimize_pe_cycles) * 100) | round(2) }}"
+      estimated_total_writes_tb: >-
+        {{
+          (
+            (_emmc_size_bytes.stdout | default(0) | int / 1024 / 1024 / 1024) *
+            pve_emmc_optimize_pe_cycles
+          ) | round(2)
+        }}
+      percent_used: >-
+        {{
+          (
+            (_lifetime_writes_kb.stdout | default(0) | int / 1024 / 1024 / 1024) /
+            (
+              (_emmc_size_bytes.stdout | default(1) | int / 1024 / 1024 / 1024) *
+              pve_emmc_optimize_pe_cycles
+            ) * 100
+          ) | round(2)
+        }}
 
 - name: Display eMMC statistics
   ansible.builtin.debug:
@@ -134,4 +149,6 @@
     msg: |
       Swap: {{ 'enabled' if _swap_enabled.stdout | int > 0 else 'disabled' }}
       Logs: {{ _log_filesystem.stdout }} ({{ 'on eMMC' if _root_device.stdout in _log_filesystem.stdout else 'external' }})
-      RRD: {{ _rrd_filesystem.stdout }} ({{ 'on eMMC' if _root_device.stdout in _rrd_filesystem.stdout else 'external' }}) | timeout: {{ _rrd_write_timeout.stdout }}s
+      RRD: {{ _rrd_filesystem.stdout }}
+      ({{ 'on eMMC' if _root_device.stdout in _rrd_filesystem.stdout else 'external' }})
+      | timeout: {{ _rrd_write_timeout.stdout }}s

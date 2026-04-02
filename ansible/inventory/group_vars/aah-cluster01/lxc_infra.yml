@@ -69,6 +69,7 @@ pve_lxcs_infra:
     features: "{{ lxc_features_podman }}"
     ha: "{{ lxc_ha_default }}"
     replication: "{{ lxc_replication_default }}"
+
   ingress02:
     vmid: 104
     hostname: ingress02.aah.muffn.io

@@ -44,6 +44,7 @@
       - --key
       - "{{ crowdsec_traefik_bouncer_api_key | trim }}"
   when: crowdsec_traefik_bouncer_name not in _crowdsec_lapi_bouncers.stdout
+  changed_when: true
 
 - name: Create CrowdSec Web UI machine account
   ansible.builtin.command:
@@ -59,3 +60,4 @@
   when:
     - crowdsec_web_ui_enabled
     - crowdsec_web_ui_machine_name not in _crowdsec_lapi_machines.stdout
+  changed_when: true

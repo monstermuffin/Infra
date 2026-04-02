@@ -44,6 +44,7 @@
       - -subj
       - /CN=traefik-proxy/O=AAH Ingress
   when: not _ingress_traefik_cert.stat.exists
+  changed_when: true
   notify: Restart traefik service
   tags:
     - config

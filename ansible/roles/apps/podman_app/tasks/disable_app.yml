@@ -1,5 +1,5 @@
 ---
-- name: "{{ _app_name }} | Stop and disable service"
+- name: Stop and disable service for {{ _app_name }}
   ansible.builtin.systemd:
     name: "{{ _app_name }}.service"
     state: stopped

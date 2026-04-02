@@ -65,7 +65,9 @@ podman_apps:
       USER_ID: "982"
       GROUP_ID: "981"
       TZ: Europe/London
-      DATABASE_URL: "jdbc:mariadb://grimmory-db:3306/grimmory?user=grimmory&password={{ grimmory_db_password | trim }}&useUnicode=true&characterEncoding=utf8&useSSL=false"
+      DATABASE_URL: >-
+        jdbc:mariadb://grimmory-db:3306/grimmory?user=grimmory&password={{
+        grimmory_db_password | trim }}&useUnicode=true&characterEncoding=utf8&useSSL=false
       DATABASE_USERNAME: grimmory
       DATABASE_PASSWORD: "{{ grimmory_db_password | trim }}"
       LOG_LEVEL: INFO

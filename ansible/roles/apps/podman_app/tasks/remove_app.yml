@@ -1,18 +1,19 @@
 ---
-- name: "{{ _orphan_name }} | Stop and disable orphaned service"
+- name: Stop and disable orphaned service for {{ _orphan_name }}
   ansible.builtin.systemd:
     name: "{{ _orphan_name }}.service"
     state: stopped
     enabled: false
   failed_when: false
 
-- name: "{{ _orphan_name }} | Remove Quadlet file"
+- name: Remove Quadlet file for {{ _orphan_name }}
   ansible.builtin.file:
     path: /etc/containers/systemd/{{ _orphan_name }}.container
     state: absent
   register: _removed_quadlet
 
-- name: "{{ _orphan_name }} | Reload systemd after removal"
+- name: Reload systemd after removal for {{ _orphan_name }}
+  # noqa: no-handler
   ansible.builtin.systemd:
     daemon_reload: true
   when: _removed_quadlet.changed

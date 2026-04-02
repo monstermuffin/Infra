@@ -131,7 +131,9 @@
     - name: Display installation summary
       ansible.builtin.debug:
         msg: |
-          Runtime: {{ pve_coral_runtime_version }} | Installed: {{ 'yes' if edgetpu_version.rc == 0 else 'no' }} | PyCoral: {{ 'yes' if pve_coral_install_pycoral else 'no' }}
+          Runtime: {{ pve_coral_runtime_version }} |
+          Installed: {{ 'yes' if edgetpu_version.rc == 0 else 'no' }} |
+          PyCoral: {{ 'yes' if pve_coral_install_pycoral else 'no' }}
       tags:
         - info
         - verify

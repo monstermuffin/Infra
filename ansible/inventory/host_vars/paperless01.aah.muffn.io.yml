@@ -68,19 +68,22 @@ podman_apps:
       PAPERLESS_URL: https://paperless.jovion.io
       PAPERLESS_OCR_USER_ARGS: '{"continue_on_soft_render_error": true}'
       PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
-      PAPERLESS_SOCIALACCOUNT_PROVIDERS: "{{ {
-        'openid_connect': {
-          'APPS': [
-            {
-              'provider_id': 'pocketid',
-              'name': 'Pocket ID',
-              'client_id': 'b5573dac-b5df-4151-a62f-b78de811fd47',
-              'secret': paperless_oidc_secret | trim,
-              'settings': {
-                'server_url': 'https://id.muffn.io/.well-known/openid-configuration'
-              }
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: >-
+        {{
+          {
+            'openid_connect': {
+              'APPS': [
+                {
+                  'provider_id': 'pocketid',
+                  'name': 'Pocket ID',
+                  'client_id': 'b5573dac-b5df-4151-a62f-b78de811fd47',
+                  'secret': paperless_oidc_secret | trim,
+                  'settings': {
+                    'server_url': 'https://id.muffn.io/.well-known/openid-configuration'
+                  }
+                }
+              ],
+              'OAUTH_PKCE_ENABLED': 'True'
             }
-          ],
-          'OAUTH_PKCE_ENABLED': 'True'
-        }
-      } | to_json }}"
+          } | to_json
+        }}

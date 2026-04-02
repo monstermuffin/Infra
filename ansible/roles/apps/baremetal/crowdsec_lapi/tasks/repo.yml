@@ -27,3 +27,4 @@
       - /bin/sh
       - /tmp/install-crowdsec-repo.sh
   when: not _crowdsec_lapi_repo.stat.exists
+  changed_when: true

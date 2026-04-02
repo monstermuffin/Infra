@@ -16,10 +16,17 @@
 
 - name: Create missing Podman networks
   ansible.builtin.command:
-    argv: "{{ ['podman', 'network', 'create', '--driver', network_item.value.driver | default('bridge')] + (network_item.value.subnet is defined | ternary(['--subnet', network_item.value.subnet], [])) + (network_item.value.gateway is defined | ternary(['--gateway', network_item.value.gateway], [])) + [network_item.key] }}"
+    argv: >-
+      {{
+        ['podman', 'network', 'create', '--driver', network_item.value.driver | default('bridge')]
+        + (network_item.value.subnet is defined | ternary(['--subnet', network_item.value.subnet], []))
+        + (network_item.value.gateway is defined | ternary(['--gateway', network_item.value.gateway], []))
+        + [network_item.key]
+      }}
   loop: "{{ podman_networks | dict2items }}"
   loop_control:
     loop_var: network_item
     index_var: network_index
     label: "{{ network_item.key }}"
   when: _podman_network_exists.results[network_index].rc != 0
+  changed_when: true

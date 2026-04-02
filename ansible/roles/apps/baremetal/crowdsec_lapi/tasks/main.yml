@@ -15,7 +15,10 @@
       - crowdsec_traefik_bouncer_api_key | trim | length > 0
       - not crowdsec_web_ui_enabled or crowdsec_web_ui_machine_name | length > 0
       - not crowdsec_web_ui_enabled or crowdsec_web_ui_machine_password | trim | length > 0
-    fail_msg: "Set crowdsec_lapi_db_password, crowdsec_lapi_registration_token (>=32 chars), crowdsec_lapi_allowed_ranges, and crowdsec_traefik_bouncer_api_key before deploying CrowdSec."
+    fail_msg: >-
+      Set crowdsec_lapi_db_password, crowdsec_lapi_registration_token (>=32 chars),
+      crowdsec_lapi_allowed_ranges, and crowdsec_traefik_bouncer_api_key before
+      deploying CrowdSec.
   tags:
     - always
 
