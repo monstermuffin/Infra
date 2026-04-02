@@ -24,8 +24,17 @@ pve_lxc_default_network_bridge: "vmbr0"
 
 pve_cluster_domain: ""
 
-pve_lxc_ssh_public_keys: ""
-pve_lxc_ssh_github_user: "monstermuffin"
+pve_lxc_bootstrap_authorized_keys: |-
+  {{
+    (
+      (root_authorized_keys | default('', true)).splitlines()
+      + (ansible_authorized_keys | default('', true)).splitlines()
+    )
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | join('\n')
+  }}
 
 pve_lxc_ha_default_max_restart: 1
 pve_lxc_ha_default_max_relocate: 1

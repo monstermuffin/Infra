@@ -65,29 +65,25 @@
   tags:
     - always
 
-- name: Fetch SSH keys from GitHub
-  ansible.builtin.uri:
-    url: "https://github.com/{{ pve_lxc_ssh_github_user }}.keys"
-    return_content: true
-  register: _github_keys
+- name: Fail if LXC bootstrap SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No bootstrap SSH keys were configured for LXC provisioning."
   when:
     - _pve_lxcs_effective | length > 0
-    - pve_lxc_ssh_public_keys == ""
-  delegate_to: localhost
-  become: false
+    - pve_lxc_bootstrap_authorized_keys | default('', true) | trim == ''
   tags:
     - provision
     - create
 
-- name: Set SSH public keys fact
+- name: Set bootstrap SSH public keys fact
   ansible.builtin.set_fact:
-    _ssh_keys: "{{ pve_lxc_ssh_public_keys | default(_github_keys.content | default(''), true) }}"
+    _ssh_keys: "{{ pve_lxc_bootstrap_authorized_keys }}"
   when: _pve_lxcs_effective | length > 0
   tags:
     - provision
     - create
 
-- name: Write SSH public keys to host
+- name: Write bootstrap SSH public keys to host
   become: true
   ansible.builtin.copy:
     content: "{{ _ssh_keys }}"

@@ -67,8 +67,6 @@ pve_system_ssh_permit_root_login: "prohibit-password"
 pve_system_ssh_password_authentication: false
 pve_system_ssh_port: 22
 
-pve_system_ssh_import_keys_url: "https://github.com/monstermuffin.keys"
-
 # MOTD
 pve_system_motd_enabled: false
 pve_system_motd_content: ""

@@ -35,3 +35,4 @@ The role maps `site_*` values into its internal `pve_system_*` vars for compatib
 - DNS makes `/etc/resolv.conf` immutable to prevent DHCP from overwriting it. Undo with `chattr -i /etc/resolv.conf`.
 - The same site DNS settings are also used as the default DNS source for newly provisioned LXCs unless a container explicitly overrides `nameserver` or `searchdomain`.
 - Hostname requires `pve_system_hosts_ip` to be set, Proxmox needs the FQDN to resolve to a real IP, not loopback, or cluster communication will break.
+- Root SSH keys are managed from `root_authorized_keys` via `pve_system_root_authorized_keys`.

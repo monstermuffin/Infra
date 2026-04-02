@@ -4,7 +4,19 @@ lxc_base_packages:
   - curl
   - ca-certificates
   - htop
+  - sudo
 
 # Packages installed when /dev/dri/renderD128 present
 lxc_base_igpu_packages:
   - vainfo
+
+lxc_ansible_user: ansible
+lxc_ansible_authorized_keys: "{{ ansible_authorized_keys | default('', true) }}"
+lxc_ansible_authorized_keys_exclusive: true
+
+lxc_root_authorized_keys: "{{ root_authorized_keys | default('', true) }}"
+lxc_root_authorized_keys_exclusive: true
+
+lxc_admin_user: muffin
+lxc_admin_authorized_keys: "{{ muffin_authorized_keys | default('', true) }}"
+lxc_admin_authorized_keys_exclusive: true

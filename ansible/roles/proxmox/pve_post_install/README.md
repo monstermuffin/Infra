@@ -7,7 +7,7 @@ Post-installation configuration for Proxmox VE. Replicates the community post-in
 - Manages APT repositories (enterprise, no-subscription, test, Ceph) using deb822 `.sources` format
 - Removes the subscription nag dialog (with APT hook to reapply after updates)
 - Manages HA services (pve-ha-lrm, pve-ha-crm, corosync)
-- Imports SSH keys for root from GitHub or a custom list
+- Manages `root` SSH keys from inventory-backed `root_authorized_keys`
 - Optionally runs apt update / dist-upgrade
 
 ## Variables

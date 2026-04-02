@@ -14,27 +14,22 @@
   tags:
     - user
 
+- name: Fail if ansible user SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No SSH keys were configured for ansible user '{{ ansible_user_name }}'."
+  when: ansible_authorized_keys | default('', true) | trim == ''
+  tags:
+    - ssh
+
 - name: Set up SSH key for ansible user
   ansible.posix.authorized_key:
     user: "{{ ansible_user_name }}"
     state: present
-    key: "{{ ansible_ssh_public_key }}"
+    key: "{{ ansible_authorized_keys }}"
     exclusive: false
   tags:
     - ssh
 
-- name: Disable enterprise repos (prevents APT update failures)
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /etc/apt/sources.list.d/pve-enterprise.list
-    - /etc/apt/sources.list.d/ceph.list
-    - /etc/apt/sources.list.d/pve-enterprise.sources
-    - /etc/apt/sources.list.d/ceph.sources
-  failed_when: false
-  tags:
-    - repos
 
 - name: Ensure sudo is installed
   ansible.builtin.apt:
@@ -46,9 +41,7 @@
 
 - name: Configure passwordless sudo for ansible user
   ansible.builtin.copy:
-    content: |
-      # Ansible automation user
-      {{ ansible_user_name }} ALL=(ALL) NOPASSWD: ALL
+    content: "{{ ansible_user_name }} ALL=(ALL) NOPASSWD: ALL\n"
     dest: "/etc/sudoers.d/{{ ansible_user_name }}"
     mode: '0440'
     validate: '/usr/sbin/visudo -cf %s'

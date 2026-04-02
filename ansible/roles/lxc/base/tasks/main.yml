@@ -10,3 +10,9 @@
   tags:
     - packages
     - setup
+
+- name: Configure users
+  ansible.builtin.import_tasks: users.yml
+  tags:
+    - users
+    - setup

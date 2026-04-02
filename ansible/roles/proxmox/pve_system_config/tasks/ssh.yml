@@ -16,38 +16,32 @@
       line: "PasswordAuthentication {{ 'yes' if pve_system_ssh_password_authentication else 'no' }}"
   notify: Restart sshd
 
-- name: Import SSH public keys from URL
-  when: pve_system_ssh_import_keys_url != ""
+- name: Fail if root SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No SSH keys were configured for Proxmox root user."
+  when: pve_system_root_authorized_keys | default('', true) | trim == ''
   tags:
     - ssh-keys
-  block:
-    - name: Download SSH public keys from {{ pve_system_ssh_import_keys_url }}
-      ansible.builtin.uri:
-        url: "{{ pve_system_ssh_import_keys_url }}"
-        return_content: true
-        timeout: 10
-      register: ssh_keys_download
-      changed_when: false
 
-    - name: Ensure .ssh directory exists for {{ pve_system_ssh_import_keys_user }}
-      ansible.builtin.file:
-        path: "~{{ pve_system_ssh_import_keys_user }}/.ssh"
-        state: directory
-        owner: "{{ pve_system_ssh_import_keys_user }}"
-        group: "{{ pve_system_ssh_import_keys_user }}"
-        mode: "0700"
+- name: Ensure .ssh directory exists for root
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  tags:
+    - ssh-keys
 
-    - name: Add downloaded SSH keys to authorized_keys
-      ansible.builtin.lineinfile:
-        path: "~{{ pve_system_ssh_import_keys_user }}/.ssh/authorized_keys"
-        line: "{{ item }}"
-        state: present
-        create: true
-        owner: "{{ pve_system_ssh_import_keys_user }}"
-        group: "{{ pve_system_ssh_import_keys_user }}"
-        mode: "0600"
-      loop: "{{ ssh_keys_download.content.strip().split('\n') }}"
-      when: item | length > 0
+- name: Set authorized_keys for root
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ pve_system_root_authorized_keys }}"
+    exclusive: "{{ pve_system_root_authorized_keys_exclusive }}"
+    manage_dir: true
+  tags:
+    - ssh-keys
 
 - name: Ensure SSH service is enabled and running
   ansible.builtin.systemd:
