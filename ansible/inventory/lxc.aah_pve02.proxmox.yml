@@ -33,8 +33,6 @@ keyed_groups:
   - key: proxmox_tags_parsed
     separator: ""
     prefix: "tag_"
-  - key: proxmox_node
-    prefix: "node_"
 
 filters:
   - (proxmox_tags | default('')) is search('ansible')
