@@ -14,7 +14,6 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DISPATCH_MAP = REPO_ROOT / "ops" / "dispatch_map.yml"
 OUTPUT_SCRIPT = Path("/tmp/dispatch_cmds.sh")
-ANSIBLE_DIR = REPO_ROOT / "ansible"
 
 
 def git_changed_files() -> list[str]:
@@ -26,7 +25,6 @@ def git_changed_files() -> list[str]:
 
 
 def extract_limit(path: str, rule: dict) -> str | None:
-    # Derive --limit value from a changed file path.
     if rule.get("limit"):
         return rule["limit"]
 
@@ -41,65 +39,82 @@ def extract_limit(path: str, rule: dict) -> str | None:
     return None
 
 
-def build_command(rule: dict, path: str) -> str | None:
-    # Build ansible-playbook command string from matched rule.
+def get_workdir(rule: dict, path: str) -> Path:
+    # Explicit 'workdir' field in the rule takes precedence. Otherwise inferred from the top-level directory of the playbook or changed file path.
+    if "workdir" in rule:
+        return REPO_ROOT / rule["workdir"]
+    ref = rule.get("playbook") or path
+    top = ref.split("/")[0]
+    candidate = REPO_ROOT / top
+    return candidate if candidate.is_dir() else REPO_ROOT
+
+
+def build_command(rule: dict, path: str) -> tuple[Path, str] | None:
+    workdir = get_workdir(rule, path)
+    prefix = workdir.name + "/"
     action = rule.get("action")
 
     if action == "playbook_self":
-        return f"ansible-playbook {path}"
+        return workdir, f"ansible-playbook {path.removeprefix(prefix)}"
 
     playbook = rule.get("playbook")
     if not playbook:
         return None
 
     limit = extract_limit(path, rule)
-    cmd = f"ansible-playbook {playbook}"
+    cmd = f"ansible-playbook {playbook.removeprefix(prefix)}"
     if limit:
         cmd += f" --limit '{limit}'"
-    return cmd
+    return workdir, cmd
 
 
 def main(dry_run: bool = False) -> None:
     changed = git_changed_files()
     if not changed:
         print("No changed files — nothing to dispatch.")
-        _write_script(["echo 'Nothing to run.'"], dry_run)
+        _write_script([], dry_run)
         return
 
     with open(DISPATCH_MAP) as f:
         config = yaml.safe_load(f)
 
     rules = config["rules"]
-    # Use dict keyed by command string to deduplicate while preserving order
-    commands: dict[str, str] = {}
+    # Dict keyed by "workdir:cmd" to deduplicate while preserving order
+    commands: dict[str, tuple[Path, str]] = {}
 
     for path in changed:
         for rule in rules:
             if fnmatch.fnmatch(path, rule["pattern"]):
-                cmd = build_command(rule, path)
-                if cmd and cmd not in commands:
-                    commands[cmd] = path
+                result = build_command(rule, path)
+                if result:
+                    workdir, cmd = result
+                    key = f"{workdir}:{cmd}"
+                    if key not in commands:
+                        commands[key] = (workdir, cmd)
                 break  # first matching rule wins
 
     if not commands:
         print("Changed files matched no dispatch rules — nothing to run.")
-        _write_script(["echo 'No matching rules.'"], dry_run)
+        _write_script([], dry_run)
         return
 
-    print(f"Dispatching {len(commands)} playbook run(s):")
-    for cmd, src in commands.items():
-        print(f"  [{src}] → {cmd}")
+    print(f"Dispatching {len(commands)} run(s):")
+    for workdir, cmd in commands.values():
+        print(f"  [{workdir.name}] → {cmd}")
 
-    script_lines = [cmd for cmd in commands]
-    _write_script(script_lines, dry_run)
+    _write_script(list(commands.values()), dry_run)
 
 
-def _write_script(commands: list[str], dry_run: bool) -> None:
-    lines = ["#!/bin/bash", "set -euo pipefail", f"cd {ANSIBLE_DIR}", ""]
-    for cmd in commands:
-        lines.append(f'echo "==> {cmd}"')
-        lines.append(cmd)
-        lines.append("")
+def _write_script(commands: list[tuple[Path, str]], dry_run: bool) -> None:
+    lines = ["#!/bin/bash", "set -euo pipefail", ""]
+
+    if not commands:
+        lines.append("echo 'Nothing to run.'")
+    else:
+        for workdir, cmd in commands:
+            lines.append(f'echo "==> [{workdir.name}] {cmd}"')
+            lines.append(f"(cd {workdir} && {cmd})")
+            lines.append("")
 
     script = "\n".join(lines)
 
