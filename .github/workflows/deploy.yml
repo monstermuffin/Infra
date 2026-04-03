@@ -1,0 +1,17 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  dispatch:
+    name: Ansible dispatch
+    runs-on: [self-hosted, linux, aah]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run dispatch
+        run: bash ops/run_dispatch.sh
