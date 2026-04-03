@@ -26,8 +26,10 @@ rules:
     limit: "aah-cluster01"
 
   # Standalone node lxc.yml
-  - pattern: "ansible/inventory/host_vars/pve*/lxc.yml"
+  - pattern: "ansible/inventory/host_vars/pve*/lxc/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
+    extra_vars:
+      pve_lxc_target: "{stem}"
 
   - pattern: "ansible/inventory/host_vars/pve*/**"
     playbook: "ansible/playbooks/pve/system_config.yml"

@@ -7,7 +7,7 @@ from pathlib import Path
 try:
     import yaml
 except ImportError:
-    print("ERROR: PyYAML not available. Install with: pip install pyyaml", file=sys.stderr)
+    print("ERROR: PyYAML not available.", file=sys.stderr)
     sys.exit(1)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
