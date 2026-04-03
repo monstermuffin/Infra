@@ -70,14 +70,25 @@
     msg: "No bootstrap SSH keys were configured for LXC provisioning."
   when:
     - _pve_lxcs_effective | length > 0
-    - pve_lxc_bootstrap_authorized_keys | default('', true) | trim == ''
+    - pve_lxc_bootstrap_authorized_keys_list | default([]) | length == 0
   tags:
     - provision
     - create
 
 - name: Set bootstrap SSH public keys fact
   ansible.builtin.set_fact:
-    _ssh_keys: "{{ pve_lxc_bootstrap_authorized_keys }}"
+    _ssh_keys: "{{ pve_lxc_bootstrap_authorized_keys_list }}"
+  when: _pve_lxcs_effective | length > 0
+  tags:
+    - provision
+    - create
+
+- name: Initialize bootstrap SSH public key file on host
+  become: true
+  ansible.builtin.copy:
+    content: ""
+    dest: /tmp/ansible_lxc_ssh_keys.pub
+    mode: "0644"
   when: _pve_lxcs_effective | length > 0
   tags:
     - provision
@@ -85,10 +96,11 @@
 
 - name: Write bootstrap SSH public keys to host
   become: true
-  ansible.builtin.copy:
-    content: "{{ _ssh_keys }}"
-    dest: /tmp/ansible_lxc_ssh_keys.pub
-    mode: "0644"
+  ansible.builtin.lineinfile:
+    path: /tmp/ansible_lxc_ssh_keys.pub
+    line: "{{ item }}"
+    insertafter: EOF
+  loop: "{{ _ssh_keys }}"
   when: _pve_lxcs_effective | length > 0
   tags:
     - provision

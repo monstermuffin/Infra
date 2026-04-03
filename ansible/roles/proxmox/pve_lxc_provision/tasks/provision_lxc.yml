@@ -92,9 +92,21 @@
 - name: "Ensure SSH keys exist on target node — {{ _lxc_name }}"
   become: true
   ansible.builtin.copy:
-    content: "{{ _ssh_keys }}"
+    content: ""
     dest: /tmp/ansible_lxc_ssh_keys.pub
     mode: "0644"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when:
+    - not _lxc_exists
+    - _lxc_delegate_host != inventory_hostname
+
+- name: "Write bootstrap SSH public keys to target node — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.lineinfile:
+    path: /tmp/ansible_lxc_ssh_keys.pub
+    line: "{{ item }}"
+    insertafter: EOF
+  loop: "{{ _ssh_keys }}"
   delegate_to: "{{ _lxc_delegate_host }}"
   when:
     - not _lxc_exists
@@ -486,6 +498,9 @@
       }}
     ansible_user: root
     ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
   when: _lxc.start | default(true)
 
 - name: "Check if HA resource exists — {{ _lxc_name }}"
@@ -523,6 +538,59 @@
     - _lxc.start | default(true)
     - _lxc.ha.enabled | default(false) | bool
     - _lxc_ha_check.rc | default(1) == 0
+
+- name: "Wait for container to be running for bootstrap key sync — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct status {{ _lxc.vmid }}"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_status_running
+  until: "'status: running' in _lxc_status_running.stdout"
+  retries: 30
+  delay: 5
+  changed_when: false
+  when: _lxc.start | default(true)
+
+- name: "Ensure root SSH directory exists in container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ _lxc.vmid }} -- install -d -m 700 /root/.ssh"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  changed_when: false
+  when: _lxc.start | default(true)
+
+- name: "Ensure root SSH path ownership is correct in container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ _lxc.vmid }} -- chown root:root /root /root/.ssh"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  changed_when: false
+  when: _lxc.start | default(true)
+
+- name: "Push bootstrap SSH public keys into container temp path — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct push {{ _lxc.vmid }} /tmp/ansible_lxc_ssh_keys.pub /tmp/ansible_lxc_ssh_keys.pub --perms 0600"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_push_bootstrap_keys
+  changed_when: _lxc_push_bootstrap_keys.rc == 0
+  when: _lxc.start | default(true)
+
+- name: "Install bootstrap SSH public keys for root in container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ _lxc.vmid }} -- install -o root -g root -m 600 /tmp/ansible_lxc_ssh_keys.pub /root/.ssh/authorized_keys"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  changed_when: false
+  when: _lxc.start | default(true)
+
+- name: "Remove temp bootstrap SSH key file from container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ _lxc.vmid }} -- rm -f /tmp/ansible_lxc_ssh_keys.pub"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  changed_when: false
+  when: _lxc.start | default(true)
 
 - name: "Display provisioning result — {{ _lxc_name }}"
   ansible.builtin.debug:

@@ -24,16 +24,23 @@ pve_lxc_default_network_bridge: "vmbr0"
 
 pve_cluster_domain: ""
 
-pve_lxc_bootstrap_authorized_keys: |-
+pve_lxc_bootstrap_private_key_pub: |-
+  {%- set _private_key = ansible_ssh_private_key_file | default('', true) | trim -%}
+  {%- if _private_key | length > 0 -%}
+  {{ lookup('ansible.builtin.file', (_private_key | regex_replace('^~', lookup('ansible.builtin.env', 'HOME'))) ~ '.pub', errors='ignore') }}
+  {%- endif -%}
+
+pve_lxc_bootstrap_authorized_keys_list: >-
   {{
     (
       (root_authorized_keys | default('', true)).splitlines()
       + (ansible_authorized_keys | default('', true)).splitlines()
+      + (pve_lxc_bootstrap_private_key_pub | default('', true)).splitlines()
     )
     | map('trim')
     | reject('equalto', '')
     | unique
-    | join('\n')
+    | list
   }}
 
 pve_lxc_ha_default_max_restart: 1
