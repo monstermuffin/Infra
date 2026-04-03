@@ -7,7 +7,7 @@ echo "$VAULT_PASSWORD" > /tmp/.vault_password
 chmod 600 /tmp/.vault_password
 
 SHA=$(git rev-parse HEAD)
-LAST_SHA_FILE="/opt/semaphore/config/last_dispatched_sha"
+LAST_SHA_FILE="/opt/github-runner/last_dispatched_sha"
 LAST_SHA=$(cat "$LAST_SHA_FILE" 2>/dev/null || echo "")
 
 # Skip if we've already processed this commit (e.g. branch delete fires same SHA)
