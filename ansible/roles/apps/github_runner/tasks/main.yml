@@ -80,6 +80,26 @@
         path: /tmp/actions-runner.tar.gz
         state: absent
 
+- name: Create .ssh directory for runner user
+  ansible.builtin.file:
+    path: "{{ github_runner_home }}/.ssh"
+    state: directory
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0700"
+  tags: [secrets, configure]
+
+- name: Write Ansible SSH private key
+  ansible.builtin.copy:
+    content: "{{ github_runner_ansible_ssh_key }}"
+    dest: "{{ github_runner_home }}/.ssh/ansible_ed25519"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0600"
+  no_log: true
+  when: github_runner_ansible_ssh_key | length > 0
+  tags: [secrets, configure]
+
 - name: Write runner environment file
   ansible.builtin.template:
     src: runner.env.j2
@@ -120,9 +140,11 @@
       --unattended
       --replace
     chdir: "{{ github_runner_home }}"
+  become: true
   become_user: "{{ github_runner_user }}"
   no_log: true
   when: not _runner_config.stat.exists
+  changed_when: true
   tags: [register]
 
 - name: Install runner systemd service
@@ -132,9 +154,20 @@
     creates: /etc/systemd/system/actions.runner.*.service
   tags: [service]
 
+- name: Read installed runner service name
+  ansible.builtin.slurp:
+    src: "{{ github_runner_home }}/.service"
+  register: _runner_service_file
+  tags: [service]
+
+- name: Set runner service name fact
+  ansible.builtin.set_fact:
+    _github_runner_service_name: "{{ _runner_service_file.content | b64decode | trim }}"
+  tags: [service]
+
 - name: Start and enable runner service
   ansible.builtin.systemd:
-    name: "actions.runner.{{ github_runner_repo | replace('/', '.') }}.{{ github_runner_name }}.service"
+    name: "{{ _github_runner_service_name }}"
     state: started
     enabled: true
     daemon_reload: true

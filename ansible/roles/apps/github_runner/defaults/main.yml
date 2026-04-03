@@ -9,3 +9,4 @@ github_runner_git_crypt_key: ""
 github_runner_labels: []
 github_runner_name: "{{ inventory_hostname }}"
 github_runner_group: Default
+github_runner_ansible_ssh_key: ""
