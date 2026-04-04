@@ -1,5 +1,5 @@
 ---
-pve_lxcs_crowdsec01:
+pve_lxcs_technitium01:
   technitium01:
     vmid: 102
     hostname: technitium01.aah.muffn.io
