@@ -20,17 +20,42 @@ rules:
     extra_vars:
       pve_lxc_target: "{stem}"
 
-  # Per-cluster CIFS mounts — matches any cluster group's cifs.yml
+  # Per-cluster CIFS mounts
   - pattern: "ansible/inventory/group_vars/*/cifs.yml"
     playbook: "ansible/playbooks/pve/cifs_mount.yml"
     limit: "{group}"
 
-  # Standalone node lxc.yml
+  # Per-cluster NFS mounts
+  - pattern: "ansible/inventory/group_vars/*/nfs.yml"
+    playbook: "ansible/playbooks/pve/nfs_mount.yml"
+    limit: "{group}"
+
+  # Per-cluster LXC defaults (ostemplate, storage, bridge, HA/replication) — re-provision all in cluster
+  - pattern: "ansible/inventory/group_vars/*/lxc.yml"
+    playbook: "ansible/playbooks/pve/provision_lxc.yml"
+    limit: "{group}"
+
+  # Per-cluster scratch pool dirs
+  - pattern: "ansible/inventory/group_vars/*/scratch.yml"
+    playbook: "ansible/playbooks/pve/scratch.yml"
+    limit: "{group}"
+
+  # Standalone host-specific files — must be before the pve*/** catch-all
   - pattern: "ansible/inventory/host_vars/pve*/lxc/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
     extra_vars:
       pve_lxc_target: "{stem}"
 
+  - pattern: "ansible/inventory/host_vars/pve*/scratch.yml"
+    playbook: "ansible/playbooks/pve/scratch.yml"
+
+  - pattern: "ansible/inventory/host_vars/pve*/cifs.yml"
+    playbook: "ansible/playbooks/pve/cifs_mount.yml"
+
+  - pattern: "ansible/inventory/host_vars/pve*/nfs.yml"
+    playbook: "ansible/playbooks/pve/nfs_mount.yml"
+
+  # Catch-all for remaining standalone host var changes
   - pattern: "ansible/inventory/host_vars/pve*/**"
     playbook: "ansible/playbooks/pve/system_config.yml"
 
