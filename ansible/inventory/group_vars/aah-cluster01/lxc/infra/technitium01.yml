@@ -12,15 +12,13 @@ pve_lxcs_technitium01:
     network_gw: "10.82.7.1"
     network_vlan: 707
     unprivileged: true
-    runtime: baremetal
+    runtime: podman
     tags:
       - ansible
       - site_aah
-      - baremetal_app
+      - podman_app
       - app_technitium
       - app_technitium_aah
-    features:
-      nesting: true
-      keyctl: false
+    features: "{{ lxc_features_podman }}"
     ha: "{{ lxc_ha_default }}"
     replication: "{{ lxc_replication_default }}"
