@@ -24,8 +24,11 @@ jobs:
         run: |
           . $GITHUB_WORKSPACE/.venv/bin/activate
           while IFS= read -r -d '' file; do
+            if python -c "import sys; data=open(sys.argv[1],'rb').read(10); sys.exit(0 if data.startswith(b'\x00GITCRYPT') else 1)" "$file" 2>/dev/null; then
+              printf 'skipping git-crypt file: %s\n' "$file"
+              continue
+            fi
             printf 'yamllint %s\n' "$file"
-            python -c "import pathlib, sys; from yamllint.decoder import detect_encoding; data = pathlib.Path(sys.argv[1]).read_bytes(); encoding = detect_encoding(data); print(f'encoding={encoding} bytes={len(data)} file={sys.argv[1]}'); data.decode(encoding)" "$file"
             yamllint "$file"
           done < <(git ls-files -z '*.yml' '*.yaml')
         working-directory: ansible
