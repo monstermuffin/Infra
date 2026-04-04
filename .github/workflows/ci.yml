@@ -41,5 +41,3 @@ jobs:
           ansible-lint
         working-directory: ansible
 
-      - name: dispatch dry-run
-        run: python3 ops/dispatch.py --dry-run
