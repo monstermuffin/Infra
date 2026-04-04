@@ -9,7 +9,7 @@ variable "cloudflare_account_id" {
 
 variable "technitium_aah_server_url" {
   type    = string
-  default = "http://10.82.7.102:5380"
+  default = "https://10.82.7.102"
 }
 
 variable "technitium_aah_api_token" {

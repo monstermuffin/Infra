@@ -38,6 +38,7 @@ run_ansible() {
 
 run_terraform() {
   python3 ops/gen_lxc_dns.py
+  terraform -chdir=tf init -backend-config="path=/opt/github-runner/terraform.tfstate" -reconfigure -input=false
   terraform -chdir=tf apply -auto-approve -var-file=terraform.tfvars
 }
 

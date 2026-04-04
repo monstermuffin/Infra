@@ -6,15 +6,13 @@ terraform {
     }
     technitium = {
       source  = "darkhonor/technitium"
-      version = "~> 0.5"
+      version = "~> 1.1"
     }
   }
 
-  # State stored on the runner outside the git working directory.
-  # This persists across runs without needing a remote backend.
-  backend "local" {
-    path = "/opt/github-runner/terraform.tfstate"
-  }
+  # State path is overridden via TF_CLI_ARGS_init or -backend-config on the runner.
+  # Locally the default terraform.tfstate should be used.
+  backend "local" {}
 }
 
 provider "cloudflare" {
