@@ -82,6 +82,9 @@ rules:
   - pattern: "ansible/inventory/host_vars/runner*"
     playbook: "ansible/playbooks/lxc/deploy_github_runner.yml"
 
+  - pattern: "ansible/inventory/host_vars/technitium*"
+    playbook: "ansible/playbooks/lxc/deploy_podman_app.yml"
+
   # LXC host_vars — reads dispatch_playbook: and/or podman_apps: from the file itself
   - pattern: "ansible/inventory/host_vars/*.yml"
     action: host_self
@@ -102,6 +105,10 @@ rules:
   - pattern: "ansible/inventory/group_vars/tag_podman_app.yml"
     playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
     limit: "tag_podman_app"
+
+  - pattern: "ansible/inventory/group_vars/tag_app_technitium.yml"
+    playbook: "ansible/playbooks/lxc/deploy_podman_app.yml"
+    limit: "tag_app_technitium"
 
   - pattern: "ansible/inventory/group_vars/proxmox.yml"
     playbook: "ansible/playbooks/pve/post_install.yml"
