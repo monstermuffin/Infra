@@ -6,8 +6,8 @@ podman_enabled: true
 podman_apps:
   jellyfin:
     enabled: true
-    image: jellyfin/jellyfin
-    # renovate: datasource=docker depName=jellyfin/jellyfin
+    image: ghcr.io/jellyfin/jellyfin
+    # renovate: datasource=docker depName=ghcr.io/jellyfin/jellyfin
     tag: 10.11.7
     port: 8096
     network_mode: host
