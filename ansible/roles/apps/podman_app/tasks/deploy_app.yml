@@ -1,72 +1,7 @@
 ---
-- name: Inspect bind mount sources for {{ _app_name }}
-  ansible.builtin.stat:
-    path: "{{ vol | split(':') | first }}"
-  register: _podman_bind_mount_sources
-  loop: "{{ _app.volumes | default([]) }}"
-  loop_control:
-    loop_var: vol
-    label: "{{ vol | split(':') | first }}"
-  when: (vol | split(':') | first) is match('^/(?!(dev|proc|sys|run|tmp|mnt)(/|$))')
-
-- name: Create bind mount directories for {{ _app_name }}
-  ansible.builtin.file:
-    path: >-
-      {{
-        (
-          vol | split(':') | first
-          if not (
-            not mount_source.stat.exists and
-            (vol | split(':') | first | basename is search('\\.'))
-          )
-          else
-          (vol | split(':') | first | dirname)
-        )
-      }}
-    state: directory
-    owner: root
-    group: root
-    mode: '1777'
-  loop: "{{ _podman_bind_mount_sources.results | default([]) }}"
-  loop_control:
-    loop_var: mount_source
-    label: "{{ mount_source.vol | split(':') | first }}"
-  vars:
-    vol: "{{ mount_source.vol }}"
-  when:
-    - mount_source.stat is defined
-    - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
-    - mount_source.stat.exists
-    - (mount_source.stat.mode | default('')) in ['1777', '01777']
-
-- name: Create managed bind mount directories for {{ _app_name }}
-  ansible.builtin.file:
-    path: >-
-      {{
-        (
-          vol | split(':') | first
-          if not (
-            not mount_source.stat.exists and
-            (vol | split(':') | first | basename is search('\\.'))
-          )
-          else
-          (vol | split(':') | first | dirname)
-        )
-      }}
-    state: directory
-    owner: "{{ _app.uid | default(0) }}"
-    group: "{{ _app.gid | default(0) }}"
-    mode: '0755'
-  loop: "{{ _podman_bind_mount_sources.results | default([]) }}"
-  loop_control:
-    loop_var: mount_source
-    label: "{{ mount_source.vol | split(':') | first }}"
-  vars:
-    vol: "{{ mount_source.vol }}"
-  when:
-    - mount_source.stat is defined
-    - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
-    - not (mount_source.stat.exists and (mount_source.stat.mode | default('')) in ['1777', '01777'])
+- name: Set up bind mount directories for {{ _app_name }}
+  ansible.builtin.include_tasks: setup_volumes.yml
+  tags: [volumes, setup]
 
 - name: Get current image digest for {{ _app_name }}
   ansible.builtin.command:
@@ -160,9 +95,11 @@
   ansible.builtin.systemd:
     name: "{{ _app_name }}.service"
   register: _service_status
+  when: _image_changed or _quadlet_result.changed
 
 - name: Display service status for {{ _app_name }}
   ansible.builtin.debug:
     msg:
       - "Service: {{ _app_name }}.service → {{ _service_status.status.ActiveState }}"
       - "Web UI: http://{{ ansible_host | default(inventory_hostname) }}:{{ _app.port | default('(no port)') }}"
+  when: _image_changed or _quadlet_result.changed

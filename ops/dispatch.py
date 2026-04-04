@@ -117,6 +117,8 @@ def _build_host_self_commands(path: str) -> list[tuple[Path, str]]:
         cmd = f"ansible-playbook {podman_playbook.removeprefix(workdir.name + '/')}"
         if limit:
             cmd += f" --limit '{limit}'"
+        # Scope to deploy path only
+        cmd += " --tags image,deploy"
         commands.append((workdir, cmd))
 
     if not commands:
