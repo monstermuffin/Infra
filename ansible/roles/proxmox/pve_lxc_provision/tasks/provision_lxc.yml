@@ -405,16 +405,6 @@
   failed_when: _lxc_start.rc != 0 and 'already running' not in (_lxc_start.stderr | default(''))
   when: _lxc.start | default(true) and not (_lxc.ha.enabled | default(false) | bool)
 
-- name: "Check if HA resource exists — {{ _lxc_name }}"
-  become: true
-  ansible.builtin.command:
-    cmd: "pvesh get /cluster/ha/resources/ct:{{ _lxc.vmid }}"
-  delegate_to: "{{ _lxc_delegate_host }}"
-  register: _lxc_ha_check
-  changed_when: false
-  failed_when: false
-  when: _lxc.ha.enabled | default(false) | bool
-
 - name: "Register container in HA — {{ _lxc_name }}"
   become: true
   ansible.builtin.command:

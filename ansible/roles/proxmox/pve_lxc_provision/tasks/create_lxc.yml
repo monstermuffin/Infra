@@ -3,14 +3,13 @@
 # Only included when the container does not yet exist.
 # Stages SSH keys on the target node, ensures the ostemplate is cached, then creates the container.
 
-- name: "Ensure SSH keys exist on target node — {{ _lxc_name }}"
+- name: "Initialize SSH key file on target node — {{ _lxc_name }}"
   become: true
   ansible.builtin.copy:
     content: ""
     dest: /tmp/ansible_lxc_ssh_keys.pub
     mode: "0644"
   delegate_to: "{{ _lxc_delegate_host }}"
-  when: _lxc_delegate_host != inventory_hostname
 
 - name: "Write bootstrap SSH public keys to target node — {{ _lxc_name }}"
   become: true
@@ -20,7 +19,6 @@
     insertafter: EOF
   loop: "{{ _ssh_keys }}"
   delegate_to: "{{ _lxc_delegate_host }}"
-  when: _lxc_delegate_host != inventory_hostname
 
 - name: "Parse ostemplate storage and filename — {{ _lxc_name }}"
   ansible.builtin.set_fact:
