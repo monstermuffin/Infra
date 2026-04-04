@@ -1,0 +1,80 @@
+---
+# Creation tasks for new LXC containers.
+# Only included when the container does not yet exist.
+# Stages SSH keys on the target node, ensures the ostemplate is cached, then creates the container.
+
+- name: "Ensure SSH keys exist on target node — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.copy:
+    content: ""
+    dest: /tmp/ansible_lxc_ssh_keys.pub
+    mode: "0644"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when: _lxc_delegate_host != inventory_hostname
+
+- name: "Write bootstrap SSH public keys to target node — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.lineinfile:
+    path: /tmp/ansible_lxc_ssh_keys.pub
+    line: "{{ item }}"
+    insertafter: EOF
+  loop: "{{ _ssh_keys }}"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when: _lxc_delegate_host != inventory_hostname
+
+- name: "Parse ostemplate storage and filename — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_template_storage: "{{ (_lxc.ostemplate | default(pve_lxc_default_ostemplate)).split(':')[0] }}"
+    _lxc_template_file: "{{ (_lxc.ostemplate | default(pve_lxc_default_ostemplate)).split('/')[-1] }}"
+
+- name: "Check if ostemplate is cached on target node — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pveam list {{ _lxc_template_storage }}"
+  register: _pveam_list
+  changed_when: false
+  delegate_to: "{{ _lxc_delegate_host }}"
+
+- name: "Download ostemplate if not cached — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pveam download {{ _lxc_template_storage }} {{ _lxc_template_file }}"
+  register: _pveam_download
+  changed_when: true
+  delegate_to: "{{ _lxc_delegate_host }}"
+  when: _lxc_template_file not in (_pveam_list.stdout | default(''))
+
+- name: "Create LXC container — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pct create {{ _lxc.vmid }}
+      {{ _lxc.ostemplate | default(pve_lxc_default_ostemplate) }}
+      --hostname {{ _lxc.hostname }}
+      --storage {{ _lxc.storage | default(pve_lxc_default_storage) }}
+      --rootfs {{ _lxc.storage | default(pve_lxc_default_storage) }}:{{
+        _lxc.disk | default(pve_lxc_default_disk) | regex_replace('[^0-9]', '') }}
+      --cores {{ _lxc.cores | default(pve_lxc_default_cores) }}
+      --memory {{ _lxc.memory | default(pve_lxc_default_memory) }}
+      --swap {{ _lxc.swap | default(pve_lxc_default_swap) }}
+      --unprivileged {{ '1' if _lxc.unprivileged | default(pve_lxc_default_unprivileged) else '0' }}
+      --onboot {{ '1' if _lxc.onboot | default(pve_lxc_default_onboot) else '0' }}
+      --net0 name=eth0,bridge={{
+        _lxc.network_bridge | default(pve_lxc_default_network_bridge)
+      }},ip={{ _lxc.network_ip | default('dhcp') }}{{
+        ',gw=' ~ _lxc.network_gw if _lxc.network_ip is defined else '' }}{{
+        ',tag=' ~ _lxc.network_vlan if _lxc.network_vlan is defined else '' }}
+      --features {{ _lxc_features | trim }}
+      {{ '--nameserver ' ~ (_lxc_effective_nameserver | quote) if _lxc_effective_nameserver | length > 0 else '' }}
+      {{ '--searchdomain ' ~ (_lxc_effective_searchdomain | quote) if _lxc_effective_searchdomain | length > 0 else '' }}
+      --ssh-public-keys /tmp/ansible_lxc_ssh_keys.pub
+      --tags {{ (_lxc.tags | default([]) + [_lxc_name]) | join(';') }}
+      {% for mp_key, mp_val in _lxc_bind_mounts.items() %}
+      --{{ mp_key }} {{ mp_val }}
+      {% endfor %}
+      {% for dev_key, dev_val in _lxc_devices.items() %}
+      --{{ dev_key }} {{ dev_val }}
+      {% endfor %}
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_create
+  changed_when: true
