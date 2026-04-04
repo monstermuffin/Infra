@@ -1,0 +1,28 @@
+---
+# Update repo-managed Podman package pins on Podman app hosts.
+#   ansible-playbook playbooks/lxc/update_podman_packages.yml
+#   ansible-playbook playbooks/lxc/update_podman_packages.yml --limit wgtun01.aah.muffn.io
+
+- name: Update Podman packages
+  hosts: "{{ target | default('tag_podman_app') }}"
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Run Podman preflight
+      ansible.builtin.import_role:
+        name: podman
+        tasks_from: preflight.yml
+      tags:
+        - podman
+        - install
+        - packages
+
+    - name: Install Podman packages
+      ansible.builtin.import_role:
+        name: podman
+        tasks_from: install.yml
+      tags:
+        - podman
+        - install
+        - packages

@@ -1,18 +1,39 @@
 ---
 podman_enabled: false
 
-# Podman packages to install
 podman_packages:
   - podman
   - podman-compose
   - crun
 
-# Container registries
+podman_package_arch_map:
+  x86_64: amd64
+  amd64: amd64
+  aarch64: arm64
+  arm64: arm64
+
+podman_package_arch: "{{ podman_package_arch_map.get(ansible_architecture | default(''), ansible_architecture | default('')) }}"
+
+podman_package_versions_by_suite:
+  bookworm:
+    podman:
+      amd64: "{{ podman_package_version_podman_bookworm_amd64 | default('') }}"
+      arm64: "{{ podman_package_version_podman_bookworm_arm64 | default('') }}"
+    podman-compose: "{{ podman_package_version_podman_compose_bookworm | default('') }}"
+    crun: "{{ podman_package_version_crun_bookworm | default('') }}"
+  trixie:
+    podman:
+      amd64: "{{ podman_package_version_podman_trixie_amd64 | default('') }}"
+      arm64: "{{ podman_package_version_podman_trixie_arm64 | default('') }}"
+    podman-compose: "{{ podman_package_version_podman_compose_trixie | default('') }}"
+    crun: "{{ podman_package_version_crun_trixie | default('') }}"
+
+podman_package_versions: "{{ podman_package_versions_by_suite.get(ansible_distribution_release | default(''), {}) }}"
+
 podman_registries:
   - docker.io
   - ghcr.io
 
-# Registries configuration
 podman_registries_insecure: []
 podman_registries_blocked: []
 podman_networks: {}

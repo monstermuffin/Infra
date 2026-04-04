@@ -13,6 +13,11 @@ rules:
   - pattern: "ansible/roles/lxc/**"
     playbook: "ansible/playbooks/lxc/manage.yml"
 
+  # podman role changes — update Podman packages/config on Podman app LXCs
+  - pattern: "ansible/roles/podman/**"
+    playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
+    limit: "tag_podman_app"
+
   # Per-cluster LXC definitions — matches any cluster group's lxc/<category>/ files
   - pattern: "ansible/inventory/group_vars/*/lxc/**/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
@@ -93,6 +98,10 @@ rules:
   - pattern: "ansible/inventory/group_vars/tag_app_cftun_aah.yml"
     playbook: "ansible/playbooks/app/ingress.yml"
     limit: "tag_app_cftun_aah"
+
+  - pattern: "ansible/inventory/group_vars/tag_podman_app.yml"
+    playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
+    limit: "tag_podman_app"
 
   - pattern: "ansible/inventory/group_vars/proxmox.yml"
     playbook: "ansible/playbooks/pve/post_install.yml"

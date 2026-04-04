@@ -1,0 +1,26 @@
+---
+# Podman package versions
+
+# renovate: suite=bookworm arch=amd64 depName=podman
+podman_package_version_podman_bookworm_amd64: "4.3.1+ds1-8+deb12u1+b2"
+
+# renovate: suite=bookworm arch=arm64 depName=podman
+podman_package_version_podman_bookworm_arm64: "4.3.1+ds1-8+deb12u1+b2"
+
+# renovate: suite=bookworm depName=podman-compose
+podman_package_version_podman_compose_bookworm: "1.0.3-3"
+
+# renovate: suite=bookworm depName=crun
+podman_package_version_crun_bookworm: "1.8.1-1+deb12u1"
+
+# renovate: suite=trixie arch=amd64 depName=podman
+podman_package_version_podman_trixie_amd64: "5.4.2+ds1-2+b2"
+
+# renovate: suite=trixie arch=arm64 depName=podman
+podman_package_version_podman_trixie_arm64: "5.4.2+ds1-2+b2"
+
+# renovate: suite=trixie depName=podman-compose
+podman_package_version_podman_compose_trixie: "1.3.0-1"
+
+# renovate: suite=trixie depName=crun
+podman_package_version_crun_trixie: "1.21-1"

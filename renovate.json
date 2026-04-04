@@ -16,6 +16,32 @@
       "matchStrings": [
         "# renovate:\\s+datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
       ]
+    },
+    {
+      "customType": "regex",
+      "description": "Match renovate tags for Debian package pins",
+      "fileMatch": [
+        "(^|/)ansible/inventory/.+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "# renovate:\\s+suite=(?<suite>\\S+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
+      ],
+      "datasourceTemplate": "deb",
+      "versioningTemplate": "deb",
+      "registryUrlTemplate": "https://deb.debian.org/debian?suite={{suite}}&components=main,contrib,non-free,non-free-firmware&binaryArch=amd64"
+    },
+    {
+      "customType": "regex",
+      "description": "Match renovate tags for Debian package pins with explicit arch",
+      "fileMatch": [
+        "(^|/)ansible/inventory/.+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "# renovate:\\s+suite=(?<suite>\\S+) arch=(?<arch>\\S+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
+      ],
+      "datasourceTemplate": "deb",
+      "versioningTemplate": "deb",
+      "registryUrlTemplate": "https://deb.debian.org/debian?suite={{suite}}&components=main,contrib,non-free,non-free-firmware&binaryArch={{arch}}"
     }
   ],
   "packageRules": [
@@ -52,6 +78,48 @@
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "labels": ["renovate", "needs-review"]
+    },
+    {
+      "description": "Podman Debian security - automerge after soak",
+      "matchDatasources": ["deb"],
+      "matchDepNames": ["podman"],
+      "matchCategories": ["security"],
+      "prPriority": 110,
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "6 hours",
+      "labels": ["renovate", "security", "podman-runtime"]
+    },
+    {
+      "description": "Podman Debian patch - automerge after 1 day",
+      "matchDatasources": ["deb"],
+      "matchDepNames": ["podman"],
+      "matchUpdateTypes": ["patch"],
+      "prPriority": 60,
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "1 day",
+      "labels": ["renovate", "patch", "podman-runtime"]
+    },
+    {
+      "description": "Podman Debian minor - automerge after 3 days",
+      "matchDatasources": ["deb"],
+      "matchDepNames": ["podman"],
+      "matchUpdateTypes": ["minor"],
+      "prPriority": 55,
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
+      "labels": ["renovate", "minor", "podman-runtime"]
+    },
+    {
+      "description": "Podman Debian major - manual review",
+      "matchDatasources": ["deb"],
+      "matchDepNames": ["podman"],
+      "matchUpdateTypes": ["major"],
+      "prPriority": 20,
+      "automerge": false,
+      "labels": ["renovate", "needs-review", "podman-runtime"]
     }
   ]
 }

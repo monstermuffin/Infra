@@ -6,9 +6,29 @@
     cache_valid_time: 3600
   tags: packages
 
+- name: Build Podman package specs
+  ansible.builtin.set_fact:
+    _podman_package_specs: "{{ _podman_package_specs | default([]) + [_podman_package_spec] }}"
+  vars:
+    _podman_package_version_entry: "{{ podman_package_versions[item] | default('') }}"
+    _podman_package_version: >-
+      {{
+        _podman_package_version_entry.get(podman_package_arch, '')
+        if _podman_package_version_entry is mapping
+        else _podman_package_version_entry
+      }}
+    _podman_package_spec: >-
+      {{
+        item ~ '=' ~ _podman_package_version
+        if _podman_package_version | length > 0
+        else item
+      }}
+  loop: "{{ podman_packages }}"
+  tags: packages
+
 - name: Install Podman packages
   ansible.builtin.apt:
-    name: "{{ podman_packages }}"
+    name: "{{ _podman_package_specs }}"
     state: present
   tags: packages
 
