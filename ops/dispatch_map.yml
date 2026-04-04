@@ -52,9 +52,9 @@ rules:
   - pattern: "ansible/inventory/host_vars/runner*"
     playbook: "ansible/playbooks/lxc/deploy_github_runner.yml"
 
-  # Generic fallback for all other LXC host_vars
+  # LXC host_vars — reads dispatch_playbook: and/or podman_apps: from the file itself
   - pattern: "ansible/inventory/host_vars/*.yml"
-    playbook: "ansible/playbooks/lxc/deploy_podman_app.yml"
+    action: host_self
 
   # Ingress stack
   - pattern: "ansible/inventory/group_vars/tag_app_ingress_aah/**"

@@ -11,6 +11,10 @@ except ImportError:
     sys.exit(1)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Loader that ignores unknown tags (e.g. !vault) so host_vars files parse without errors
+_SafeLoader = yaml.SafeLoader
+yaml.add_multi_constructor("", lambda loader, tag, node: loader.construct_scalar(node), Loader=_SafeLoader)
 DISPATCH_MAP = REPO_ROOT / "ops" / "dispatch_map.yml"
 OUTPUT_SCRIPT = Path("/tmp/dispatch_cmds.sh")
 
@@ -53,17 +57,20 @@ def get_workdir(rule: dict, path: str) -> Path:
     return candidate if candidate.is_dir() else REPO_ROOT
 
 
-def build_command(rule: dict, path: str) -> tuple[Path, str] | None:
+def build_command(rule: dict, path: str) -> list[tuple[Path, str]]:
     workdir = get_workdir(rule, path)
     prefix = workdir.name + "/"
     action = rule.get("action")
 
     if action == "playbook_self":
-        return workdir, f"ansible-playbook {path.removeprefix(prefix)}"
+        return [(workdir, f"ansible-playbook {path.removeprefix(prefix)}")]
+
+    if action == "host_self":
+        return _build_host_self_commands(path)
 
     playbook = rule.get("playbook")
     if not playbook:
-        return None
+        return []
 
     limit = extract_limit(path, rule)
     cmd = f"ansible-playbook {playbook.removeprefix(prefix)}"
@@ -71,7 +78,40 @@ def build_command(rule: dict, path: str) -> tuple[Path, str] | None:
         cmd += f" --limit '{limit}'"
     for key, val in rule.get("extra_vars", {}).items():
         cmd += f" -e {key}={_expand_template(val, path)}"
-    return workdir, cmd
+    return [(workdir, cmd)]
+
+
+def _build_host_self_commands(path: str) -> list[tuple[Path, str]]:
+    try:
+        with open(REPO_ROOT / path) as f:
+            host_vars = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        # File deleted — nothing to deploy
+        return []
+
+    limit = extract_limit(path, {})
+    commands = []
+
+    custom_playbook = host_vars.get("dispatch_playbook")
+    if custom_playbook:
+        workdir = get_workdir({"playbook": custom_playbook}, path)
+        cmd = f"ansible-playbook {custom_playbook.removeprefix(workdir.name + '/')}"
+        if limit:
+            cmd += f" --limit '{limit}'"
+        commands.append((workdir, cmd))
+
+    if "podman_apps" in host_vars:
+        podman_playbook = "ansible/playbooks/lxc/deploy_podman_app.yml"
+        workdir = get_workdir({"playbook": podman_playbook}, path)
+        cmd = f"ansible-playbook {podman_playbook.removeprefix(workdir.name + '/')}"
+        if limit:
+            cmd += f" --limit '{limit}'"
+        commands.append((workdir, cmd))
+
+    if not commands:
+        print(f"  WARNING: {path} matched host_self but has no dispatch_playbook or podman_apps — skipping")
+
+    return commands
 
 
 def main(dry_run: bool = False) -> None:
@@ -91,9 +131,7 @@ def main(dry_run: bool = False) -> None:
     for path in changed:
         for rule in rules:
             if Path(path).match(rule["pattern"]):
-                result = build_command(rule, path)
-                if result:
-                    workdir, cmd = result
+                for workdir, cmd in build_command(rule, path):
                     key = f"{workdir}:{cmd}"
                     if key not in commands:
                         commands[key] = (workdir, cmd)
