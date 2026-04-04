@@ -1,7 +1,7 @@
 ---
 proxmox_node: pve03.aah.muffn.io
 
-# podman_enabled: true
+podman_enabled: true
 
 # podman_apps:
 #   rembg:
