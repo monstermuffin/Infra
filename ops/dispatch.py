@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,8 +21,11 @@ OUTPUT_SCRIPT = Path("/tmp/dispatch_cmds.sh")
 
 
 def git_changed_files() -> list[str]:
+    before = os.environ.get("BEFORE_SHA", "").strip()
+    # Use the push's before SHA to cover all commits in a multi-commit push.
+    base = before if before and before != "0" * 40 else "HEAD~1"
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True, text=True, cwd=REPO_ROOT, check=True,
     )
     return [f.strip() for f in result.stdout.splitlines() if f.strip()]
