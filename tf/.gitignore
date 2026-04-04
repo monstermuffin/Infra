@@ -3,5 +3,5 @@
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
-# Tracked encrypted via repo-root .gitattributes (git-crypt)
+# Tracked encrypted
 !terraform.tfvars
