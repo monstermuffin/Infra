@@ -1,4 +1,12 @@
 terraform {
+  cloud {
+    organization = "muffn_io"
+
+    workspaces {
+      name = "infra-main"
+    }
+  }
+
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"
@@ -10,9 +18,6 @@ terraform {
     }
   }
 
-  # State path is overridden via TF_CLI_ARGS_init or -backend-config on the runner.
-  # Locally the default terraform.tfstate should be used.
-  backend "local" {}
 }
 
 provider "cloudflare" {
