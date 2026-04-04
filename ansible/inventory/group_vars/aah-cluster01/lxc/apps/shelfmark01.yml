@@ -1,0 +1,27 @@
+---
+pve_lxcs_shelfmark01:
+  shelfmark01:
+    vmid: 121
+    hostname: shelfmark01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.121/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_shelfmark
+    features: "{{ lxc_features_podman }}"
+    bind_mounts:
+      - host_path: /mnt/scratch/bookdrop
+        lxc_path: /books
+        shared: true
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"

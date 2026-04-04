@@ -1,5 +1,5 @@
 ---
-pve_lxcs_downloads:
+pve_lxcs_wgtun01:
   wgtun01:
     vmid: 117
     hostname: wgtun01.aah.muffn.io
@@ -25,32 +25,6 @@ pve_lxcs_downloads:
         lxc_path: /mnt/incomplete
         shared: true
       - host_path: /mnt/aah-fs02/torrent-downloads
-        lxc_path: /mnt/downloads
-        shared: true
-    ha: "{{ lxc_ha_default }}"
-    replication: "{{ lxc_replication_default }}"
-  sabnzbd01:
-    vmid: 113
-    hostname: sabnzbd01.aah.muffn.io
-    node: pve03
-    cores: 12
-    memory: 8192
-    swap: 512
-    disk: "64G"
-    storage: "local-zfs"
-    network_ip: "10.82.10.113/24"
-    network_gw: "10.82.10.1"
-    network_vlan: 710
-    unprivileged: true
-    runtime: podman
-    tags:
-      - ansible
-      - site_aah
-      - podman_app
-      - app_sabnzbd
-    features: "{{ lxc_features_podman }}"
-    bind_mounts:
-      - host_path: /mnt/scratch/downloads
         lxc_path: /mnt/downloads
         shared: true
     ha: "{{ lxc_ha_default }}"

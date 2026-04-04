@@ -1,0 +1,23 @@
+---
+pve_lxcs_changedetection01:
+  changedetection01:
+    vmid: 128
+    hostname: changedetection01.aah.muffn.io
+    node: pve03
+    cores: 4
+    memory: 4096
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.128/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_changedetection
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"

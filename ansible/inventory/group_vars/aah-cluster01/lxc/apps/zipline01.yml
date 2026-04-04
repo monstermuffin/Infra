@@ -1,0 +1,23 @@
+---
+pve_lxcs_zipline01:
+  zipline01:
+    vmid: 119
+    hostname: zipline01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 4096
+    swap: 512
+    disk: "32G"
+    network_ip: "10.82.10.119/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - site_aah
+      - podman_app
+      - app_zipline
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
