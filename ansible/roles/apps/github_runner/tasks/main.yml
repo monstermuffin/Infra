@@ -2,10 +2,12 @@
 - name: Install system dependencies
   ansible.builtin.apt:
     name:
+      - ca-certificates
       - curl
       - jq
       - git
       - git-crypt
+      - gnupg
       - python3
       - python3-venv
       - python3-yaml
@@ -13,6 +15,30 @@
       - pipx
     state: present
     update_cache: true
+  tags: [packages, install]
+
+- name: Install HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: "{{ github_runner_terraform_keyring }}"
+    mode: "0644"
+  when: github_runner_install_terraform | bool
+  tags: [packages, install, repo]
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ github_runner_terraform_keyring }}] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    filename: hashicorp
+    state: present
+    update_cache: true
+  when: github_runner_install_terraform | bool
+  tags: [packages, install, repo]
+
+- name: Install Terraform CLI
+  ansible.builtin.apt:
+    name: "{{ github_runner_terraform_package }}"
+    state: present
+  when: github_runner_install_terraform | bool
   tags: [packages, install]
 
 - name: Create github-runner user

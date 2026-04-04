@@ -140,10 +140,15 @@ def main(dry_run: bool = False) -> None:
     rules = config["rules"]
     # Dict keyed by "workdir:cmd" to deduplicate while preserving order
     commands: dict[str, tuple[Path, str]] = {}
+    notices: list[str] = []
 
     for path in changed:
         for rule in rules:
             if Path(path).match(rule["pattern"]):
+                if rule.get("action") == "manual_notice":
+                    note = rule.get("note", f"Manual action required for {path}")
+                    notices.append(_expand_template(note, path))
+                    break
                 for workdir, cmd in build_command(rule, path):
                     key = f"{workdir}:{cmd}"
                     if key not in commands:
@@ -152,12 +157,21 @@ def main(dry_run: bool = False) -> None:
 
     if not commands:
         print("Changed files matched no dispatch rules — nothing to run.")
+        if notices:
+            print("Manual follow-up required:")
+            for note in dict.fromkeys(notices):
+                print(f"  - {note}")
         _write_script([], dry_run)
         return
 
     print(f"Dispatching {len(commands)} run(s):")
     for workdir, cmd in commands.values():
         print(f"  [{workdir.name}] → {cmd}")
+
+    if notices:
+        print("Manual follow-up required:")
+        for note in dict.fromkeys(notices):
+            print(f"  - {note}")
 
     _write_script(list(commands.values()), dry_run)
 

@@ -10,3 +10,6 @@ github_runner_labels: []
 github_runner_name: "{{ inventory_hostname }}"
 github_runner_group: Default
 github_runner_ansible_ssh_key: ""
+github_runner_install_terraform: true
+github_runner_terraform_package: terraform
+github_runner_terraform_keyring: /usr/share/keyrings/hashicorp-archive-keyring.asc

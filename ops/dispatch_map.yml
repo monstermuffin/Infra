@@ -18,6 +18,22 @@ rules:
     playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
     limit: "tag_podman_app"
 
+  # Block jobs that will sepaku the runner itself
+  - pattern: "ansible/inventory/group_vars/*/lxc/**/runner*.yml"
+    action: manual_notice
+
+  - pattern: "ansible/inventory/group_vars/tag_app_github_runner.yml"
+    action: manual_notice
+
+  - pattern: "ansible/inventory/host_vars/runner*"
+    action: manual_notice
+
+  - pattern: "ansible/roles/apps/github_runner/**/*"
+    action: manual_notice
+
+  - pattern: "ansible/playbooks/lxc/deploy_github_runner.yml"
+    action: manual_notice
+
   # Per-cluster LXC definitions — matches any cluster group's lxc/<category>/ files
   - pattern: "ansible/inventory/group_vars/*/lxc/**/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
@@ -78,9 +94,6 @@ rules:
 
   - pattern: "ansible/inventory/host_vars/crowdsec*"
     playbook: "ansible/playbooks/lxc/deploy_crowdsec_lapi.yml"
-
-  - pattern: "ansible/inventory/host_vars/runner*"
-    playbook: "ansible/playbooks/lxc/deploy_github_runner.yml"
 
   - pattern: "ansible/inventory/host_vars/technitium*"
     playbook: "ansible/playbooks/lxc/deploy_podman_app.yml"
