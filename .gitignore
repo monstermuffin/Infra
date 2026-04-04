@@ -10,6 +10,7 @@ docs/
 .env
 *claude*
 ansible/.venv
+*__pycache__*
 .envrc
 *.key
 *.pem
