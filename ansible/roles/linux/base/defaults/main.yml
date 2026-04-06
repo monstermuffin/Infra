@@ -7,6 +7,10 @@ linux_base_manage_hosts_entry: true
 linux_base_manage_timezone: true
 linux_base_timezone: "{{ site_timezone | default('Europe/London') }}"
 
+linux_base_manage_dns: true
+linux_base_nameservers: "{{ site_nameservers | default([]) }}"
+linux_base_search_domains: "{{ site_search_domains | default([]) }}"
+
 linux_base_manage_apt_sources: true
 linux_base_packages:
   - ca-certificates

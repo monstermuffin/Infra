@@ -1,0 +1,7 @@
+# Managed by Ansible (linux/base)
+{% if linux_base_search_domains | length > 0 %}
+search {{ linux_base_search_domains | join(' ') }}
+{% endif %}
+{% for ns in linux_base_nameservers %}
+nameserver {{ ns }}
+{% endfor %}

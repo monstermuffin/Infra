@@ -25,6 +25,15 @@
     - timezone
     - setup
 
+- name: Configure DNS
+  ansible.builtin.import_tasks: dns.yml
+  when:
+    - linux_base_manage_dns | bool
+    - linux_base_nameservers | length > 0
+  tags:
+    - dns
+    - setup
+
 - name: Configure apt sources
   ansible.builtin.import_tasks: apt_sources.yml
   when:
