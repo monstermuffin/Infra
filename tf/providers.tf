@@ -30,12 +30,9 @@ provider "technitium" {
   api_token       = var.technitium_aah_api_token
   skip_tls_verify = true
 }
-
-# Add additional site providers here as Technitium instances are deployed:
-#
-# provider "technitium" {
-#   alias           = "lcy"
-#   server_url      = var.technitium_lcy_server_url
-#   api_token       = var.technitium_lcy_api_token
-#   skip_tls_verify = true
-# }
+provider "technitium" {
+  alias           = "lcy"
+  server_url      = var.technitium_lcy_server_url
+  api_token       = var.technitium_lcy_api_token
+  skip_tls_verify = true
+}
