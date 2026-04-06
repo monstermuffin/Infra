@@ -144,7 +144,7 @@
 - name: Write Ansible SSH private key
   ansible.builtin.copy:
     content: "{{ github_runner_ansible_ssh_key }}"
-    dest: "{{ github_runner_home }}/.ssh/ansible_ed25519"
+    dest: "{{ github_runner_home }}/.ssh/ansible_new"
     owner: "{{ github_runner_user }}"
     group: "{{ github_runner_user }}"
     mode: "0600"

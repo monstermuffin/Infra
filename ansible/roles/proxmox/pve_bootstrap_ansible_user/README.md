@@ -17,6 +17,6 @@ ansible-playbook playbooks/pve/bootstrap.yml -u root
 ansible_user_name: ansible
 ansible_user_groups: [sudo]
 ansible_authorized_keys: |
-  ssh-ed25519 AAAA... semaphore-ansible
+  ssh-ed25519 AAAA... ansible_new
   ssh-ed25519 AAAA... muffin@mbp.internal.muffn.io
 ```
