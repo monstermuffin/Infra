@@ -17,6 +17,8 @@ pve_lxcs_qdev01:
     onboot: true
     tags:
       - ansible
+      - os_linux
+      - os_trixie
       - site_aah
       - app_qdevice
     features:

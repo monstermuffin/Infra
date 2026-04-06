@@ -18,6 +18,8 @@ pve_lxcs_test01:
     runtime: podman
     tags:
       - ansible
+      - os_linux
+      - os_trixie
       - site_aah
     features: "{{ lxc_features_podman }}"
     ha:

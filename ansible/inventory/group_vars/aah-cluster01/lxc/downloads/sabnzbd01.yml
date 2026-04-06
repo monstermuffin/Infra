@@ -16,6 +16,8 @@ pve_lxcs_sabnzbd01:
     runtime: podman
     tags:
       - ansible
+      - os_linux
+      - os_trixie
       - site_aah
       - podman_app
       - app_sabnzbd

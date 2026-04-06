@@ -15,6 +15,8 @@ pve_lxcs_wgtun01:
     runtime: podman
     tags:
       - ansible
+      - os_linux
+      - os_trixie
       - site_aah
       - app_wgtun
       - podman_app

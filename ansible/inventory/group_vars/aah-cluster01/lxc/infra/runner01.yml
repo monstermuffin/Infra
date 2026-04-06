@@ -18,6 +18,8 @@ pve_lxcs_runner01:
     runtime: baremetal
     tags:
       - ansible
+      - os_linux
+      - os_trixie
       - site_aah
       - app_github_runner
     features:
