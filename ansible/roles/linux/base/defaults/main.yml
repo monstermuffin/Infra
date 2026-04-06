@@ -1,0 +1,45 @@
+---
+linux_base_manage_hostname: true
+linux_base_hostname: "{{ proxmox_hostname | default(inventory_hostname) }}"
+linux_base_hostname_ip: "127.0.1.1"
+linux_base_manage_hosts_entry: true
+
+linux_base_manage_timezone: true
+linux_base_timezone: "{{ site_timezone | default('Europe/London') }}"
+
+linux_base_manage_apt_sources: true
+linux_base_packages:
+  - ca-certificates
+  - curl
+  - git
+  - htop
+  - rsync
+  - sudo
+  - tmux
+  - vim
+linux_base_extra_packages: []
+linux_base_igpu_packages:
+  - vainfo
+
+linux_base_manage_root_authorized_keys: true
+linux_base_root_authorized_keys: "{{ root_authorized_keys | default('', true) }}"
+linux_base_root_authorized_keys_exclusive: true
+
+linux_base_manage_ansible_user: true
+linux_base_ansible_user: ansible
+linux_base_ansible_user_groups:
+  - "{{ linux_base_admin_group }}"
+linux_base_ansible_authorized_keys: "{{ ansible_authorized_keys | default('', true) }}"
+linux_base_ansible_authorized_keys_exclusive: true
+linux_base_ansible_passwordless_sudo: true
+
+linux_base_manage_admin_user: true
+linux_base_admin_user: muffin
+linux_base_admin_user_groups:
+  - "{{ linux_base_admin_group }}"
+linux_base_admin_authorized_keys: "{{ muffin_authorized_keys | default('', true) }}"
+linux_base_admin_authorized_keys_exclusive: true
+linux_base_admin_passwordless_sudo: true
+
+linux_base_admin_group: >-
+  {{ 'wheel' if ansible_os_family in ['RedHat', 'Rocky', 'AlmaLinux', 'Fedora'] else 'sudo' }}

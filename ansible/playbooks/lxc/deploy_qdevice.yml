@@ -12,6 +12,10 @@
   gather_facts: true
 
   roles:
+    - role: linux/base
+      tags:
+        - base
+        - setup
     - role: apps/qdevice
       tags:
         - qnetd

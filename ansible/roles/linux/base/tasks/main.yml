@@ -1,0 +1,47 @@
+---
+- name: Gather facts if not already gathered
+  ansible.builtin.setup:
+  when: ansible_system is not defined
+
+- name: Verify target is Linux
+  ansible.builtin.assert:
+    that:
+      - ansible_system == "Linux"
+    fail_msg: "linux/base only supports Linux hosts"
+  tags:
+    - always
+
+- name: Configure hostname
+  ansible.builtin.import_tasks: hostname.yml
+  when: linux_base_manage_hostname | bool
+  tags:
+    - hostname
+    - setup
+
+- name: Configure timezone
+  ansible.builtin.import_tasks: timezone.yml
+  when: linux_base_manage_timezone | bool
+  tags:
+    - timezone
+    - setup
+
+- name: Configure apt sources
+  ansible.builtin.import_tasks: apt_sources.yml
+  when:
+    - linux_base_manage_apt_sources | bool
+    - ansible_pkg_mgr == "apt"
+  tags:
+    - apt
+    - setup
+
+- name: Install base packages
+  ansible.builtin.import_tasks: packages.yml
+  tags:
+    - packages
+    - setup
+
+- name: Configure users
+  ansible.builtin.import_tasks: users.yml
+  tags:
+    - users
+    - setup

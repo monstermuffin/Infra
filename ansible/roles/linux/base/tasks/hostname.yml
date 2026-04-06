@@ -1,0 +1,19 @@
+---
+- name: Derive short hostname
+  ansible.builtin.set_fact:
+    _linux_base_short_hostname: "{{ linux_base_hostname | regex_replace('\\..*$', '') }}"
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ linux_base_hostname }}"
+
+- name: Ensure host resolves to the managed hostname locally
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\\.0\\.1\\.1\\s+'
+    line: >-
+      {{ linux_base_hostname_ip }} {{ linux_base_hostname }}
+      {{ _linux_base_short_hostname if _linux_base_short_hostname != linux_base_hostname else '' }}
+    create: true
+    mode: "0644"
+  when: linux_base_manage_hosts_entry | bool

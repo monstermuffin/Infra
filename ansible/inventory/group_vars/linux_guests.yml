@@ -1,0 +1,4 @@
+---
+# All Linux guest policy.
+
+linux_base_extra_packages: []

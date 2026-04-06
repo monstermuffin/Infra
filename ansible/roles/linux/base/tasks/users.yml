@@ -1,0 +1,88 @@
+---
+- name: Fail if root user SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No SSH keys were configured for root user."
+  when:
+    - linux_base_manage_root_authorized_keys | bool
+    - linux_base_root_authorized_keys | default('', true) | trim == ''
+
+- name: Add SSH keys for root user
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ linux_base_root_authorized_keys }}"
+    exclusive: "{{ linux_base_root_authorized_keys_exclusive }}"
+    manage_dir: true
+  when: linux_base_manage_root_authorized_keys | bool
+
+- name: Create ansible user
+  ansible.builtin.user:
+    name: "{{ linux_base_ansible_user }}"
+    state: present
+    shell: /bin/bash
+    create_home: true
+    groups: "{{ linux_base_ansible_user_groups | reject('equalto', '') | join(',') }}"
+    append: true
+  when: linux_base_manage_ansible_user | bool
+
+- name: Fail if ansible user SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No SSH keys were configured for ansible user '{{ linux_base_ansible_user }}'."
+  when:
+    - linux_base_manage_ansible_user | bool
+    - linux_base_ansible_authorized_keys | default('', true) | trim == ''
+
+- name: Add SSH key for ansible user
+  ansible.posix.authorized_key:
+    user: "{{ linux_base_ansible_user }}"
+    state: present
+    key: "{{ linux_base_ansible_authorized_keys }}"
+    exclusive: "{{ linux_base_ansible_authorized_keys_exclusive }}"
+    manage_dir: true
+  when: linux_base_manage_ansible_user | bool
+
+- name: Configure passwordless sudo for ansible user
+  ansible.builtin.copy:
+    content: "{{ linux_base_ansible_user }} ALL=(ALL) NOPASSWD: ALL\n"
+    dest: "/etc/sudoers.d/{{ linux_base_ansible_user }}"
+    mode: '0440'
+    validate: '/usr/sbin/visudo -cf %s'
+  when:
+    - linux_base_manage_ansible_user | bool
+    - linux_base_ansible_passwordless_sudo | bool
+
+- name: Create admin user
+  ansible.builtin.user:
+    name: "{{ linux_base_admin_user }}"
+    state: present
+    shell: /bin/bash
+    create_home: true
+    groups: "{{ linux_base_admin_user_groups | reject('equalto', '') | join(',') }}"
+    append: true
+  when: linux_base_manage_admin_user | bool
+
+- name: Fail if admin user SSH keys are empty
+  ansible.builtin.fail:
+    msg: "No SSH keys were configured for admin user '{{ linux_base_admin_user }}'."
+  when:
+    - linux_base_manage_admin_user | bool
+    - linux_base_admin_authorized_keys | default('', true) | trim == ''
+
+- name: Add SSH keys for admin user
+  ansible.posix.authorized_key:
+    user: "{{ linux_base_admin_user }}"
+    state: present
+    key: "{{ linux_base_admin_authorized_keys }}"
+    exclusive: "{{ linux_base_admin_authorized_keys_exclusive }}"
+    manage_dir: true
+  when: linux_base_manage_admin_user | bool
+
+- name: Configure passwordless sudo for admin user
+  ansible.builtin.copy:
+    content: "{{ linux_base_admin_user }} ALL=(ALL) NOPASSWD: ALL\n"
+    dest: "/etc/sudoers.d/{{ linux_base_admin_user }}"
+    mode: '0440'
+    validate: '/usr/sbin/visudo -cf %s'
+  when:
+    - linux_base_manage_admin_user | bool
+    - linux_base_admin_passwordless_sudo | bool

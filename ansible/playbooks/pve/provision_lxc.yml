@@ -42,7 +42,7 @@
         timeout: 300
         sleep: 5
   roles:
-    - lxc/base
+    - linux/base
 
 - name: Validate requested LXC selector
   hosts: localhost

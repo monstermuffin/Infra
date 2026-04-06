@@ -1,0 +1,17 @@
+---
+# Debian Trixie (and newer) uses deb822 format.
+- name: Enable non-free apt repositories
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/debian.sources
+    regexp: '^Components:.*$'
+    replace: 'Components: contrib main non-free non-free-firmware'
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_distribution_major_version | int >= 13
+  register: _linux_base_apt_sources_changed
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ 0 if _linux_base_apt_sources_changed.changed | default(false) else 3600 }}"
+  when: ansible_os_family == "Debian"

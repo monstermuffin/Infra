@@ -20,7 +20,7 @@
   gather_facts: true
 
   roles:
-    - role: lxc/base
+    - role: linux/base
       tags:
         - base
         - setup

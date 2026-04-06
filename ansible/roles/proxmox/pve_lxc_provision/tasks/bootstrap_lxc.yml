@@ -1,7 +1,7 @@
 ---
 # Bootstrap tasks for newly created LXC containers.
 # Only included when the container did not previously exist and start is enabled.
-# Registers the container for guest bootstrap (lxc/base) and injects SSH keys via pct exec.
+# Registers the container for guest bootstrap (linux/base) and injects SSH keys via pct exec.
 
 - name: "Register LXC for guest bootstrap — {{ _lxc_name }}"
   ansible.builtin.add_host:

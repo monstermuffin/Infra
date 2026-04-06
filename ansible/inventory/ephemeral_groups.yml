@@ -2,3 +2,9 @@
 all:
   children:
     lxc_bootstrap_targets: {}
+    linux_guests:
+      children:
+        proxmox_all_lxc: {}
+        tag_os_linux: {}
+        tag_os_trixie: {}
+        lxc_bootstrap_targets: {}

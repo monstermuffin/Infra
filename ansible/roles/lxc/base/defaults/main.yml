@@ -1,5 +1,4 @@
 ---
-
 lxc_base_packages:
   - curl
   - ca-certificates

@@ -1,18 +1,15 @@
 ---
-- name: Configure APT sources
-  ansible.builtin.import_tasks: apt_sources.yml
-  tags:
-    - apt
-    - setup
-
-- name: Install base packages
-  ansible.builtin.import_tasks: packages.yml
-  tags:
-    - packages
-    - setup
-
-- name: Configure users
-  ansible.builtin.import_tasks: users.yml
-  tags:
-    - users
-    - setup
+- name: Apply generic Linux guest baseline
+  ansible.builtin.import_role:
+    name: linux/base
+  vars:
+    linux_base_packages: "{{ lxc_base_packages }}"
+    linux_base_igpu_packages: "{{ lxc_base_igpu_packages }}"
+    linux_base_ansible_user: "{{ lxc_ansible_user }}"
+    linux_base_ansible_authorized_keys: "{{ lxc_ansible_authorized_keys }}"
+    linux_base_ansible_authorized_keys_exclusive: "{{ lxc_ansible_authorized_keys_exclusive }}"
+    linux_base_root_authorized_keys: "{{ lxc_root_authorized_keys }}"
+    linux_base_root_authorized_keys_exclusive: "{{ lxc_root_authorized_keys_exclusive }}"
+    linux_base_admin_user: "{{ lxc_admin_user }}"
+    linux_base_admin_authorized_keys: "{{ lxc_admin_authorized_keys }}"
+    linux_base_admin_authorized_keys_exclusive: "{{ lxc_admin_authorized_keys_exclusive }}"
