@@ -5,13 +5,20 @@
 
 rules:
 
-  # group_vars/all.yml — base keys/users applied to all LXCs
+  # group_vars/all.yml — base keys/users applied to all Linux guests
   - pattern: "ansible/inventory/group_vars/all.yml"
-    playbook: "ansible/playbooks/lxc/manage.yml"
+    playbook: "ansible/playbooks/linux/manage.yml"
 
-  # lxc/base role changes — re-apply base config to all running LXCs
+  # Guest-wide Linux policy overrides
+  - pattern: "ansible/inventory/group_vars/linux_guests.yml"
+    playbook: "ansible/playbooks/linux/manage.yml"
+
+  # linux/base or compatibility shim changes — re-apply guest baseline
+  - pattern: "ansible/roles/linux/**"
+    playbook: "ansible/playbooks/linux/manage.yml"
+
   - pattern: "ansible/roles/lxc/**"
-    playbook: "ansible/playbooks/lxc/manage.yml"
+    playbook: "ansible/playbooks/linux/manage.yml"
 
   # podman role changes — update Podman packages/config on Podman app LXCs
   - pattern: "ansible/roles/podman/**"
@@ -82,6 +89,10 @@ rules:
 
   - pattern: "ansible/inventory/host_vars/pve*.yml"
     playbook: "ansible/playbooks/pve/system_config.yml"
+
+  # Split host_vars directories, e.g. host_vars/ingress01.aah.muffn.io/linux.yml
+  - pattern: "ansible/inventory/host_vars/*/*.yml"
+    action: host_self
 
   - pattern: "ansible/inventory/host_vars/frigate*"
     playbook: "ansible/playbooks/lxc/deploy_frigate_docker.yml"

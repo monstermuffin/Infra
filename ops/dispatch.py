@@ -103,6 +103,14 @@ def _build_host_self_commands(path: str) -> list[tuple[Path, str]]:
     limit = extract_limit(path, {})
     commands = []
 
+    if any(str(key).startswith("linux_base_") for key in host_vars):
+        linux_playbook = "ansible/playbooks/linux/manage.yml"
+        workdir = get_workdir({"playbook": linux_playbook}, path)
+        cmd = f"ansible-playbook {linux_playbook.removeprefix(workdir.name + '/')}"
+        if limit:
+            cmd += f" --limit '{limit}'"
+        commands.append((workdir, cmd))
+
     custom_playbook = host_vars.get("dispatch_playbook")
     if custom_playbook:
         workdir = get_workdir({"playbook": custom_playbook}, path)
