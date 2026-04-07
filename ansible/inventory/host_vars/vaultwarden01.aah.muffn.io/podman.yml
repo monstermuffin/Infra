@@ -1,0 +1,85 @@
+---
+podman_enabled: true
+
+podman_networks:
+  vaultwarden: {}
+
+podman_apps:
+  vaultwarden-postgres:
+    enabled: true
+    image: postgres
+    # renovate: datasource=docker depName=postgres
+    tag: "16"
+    container_name: vaultwarden-postgres
+    network: vaultwarden
+    uid: 999
+    gid: 999
+    volumes:
+      - /opt/vaultwarden/postgres:/var/lib/postgresql/data
+    env:
+      POSTGRES_USER: bw
+      POSTGRES_PASSWORD: "{{ vaultwarden_db_password | trim }}"
+      POSTGRES_DB: bitwardenrs
+      PGDATA: /var/lib/postgresql/data
+
+  vaultwarden:
+    enabled: true
+    image: ghcr.io/dani-garcia/vaultwarden
+    # renovate: datasource=docker depName=ghcr.io/dani-garcia/vaultwarden
+    tag: 1.35.4
+    port: 8443
+    container_port: 443
+    network: vaultwarden
+    after:
+      - vaultwarden-postgres.service
+    requires:
+      - vaultwarden-postgres.service
+    volumes:
+      - /opt/vaultwarden/data:/data
+      - /opt/vaultwarden/ssl:/ssl:ro
+    files:
+      - dest: /opt/vaultwarden/ssl/cert.pem
+        content: "{{ vaultwarden_tls_cert }}"
+        mode: '0644'
+      - dest: /opt/vaultwarden/ssl/key.pem
+        content: "{{ vaultwarden_tls_key }}"
+        mode: '0600'
+    env:
+      TZ: Europe/London
+      ROCKET_ADDRESS: "0.0.0.0"
+      ROCKET_PORT: "443"
+      ROCKET_TLS: '{certs="/ssl/cert.pem",key="/ssl/key.pem"}'
+      DATABASE_URL: "postgresql://bw:{{ vaultwarden_db_password | trim }}@vaultwarden-postgres:5432/bitwardenrs"
+      LOG_FILE: /data/vaultwarden.log
+      DOMAIN: https://vw.jovion.io
+      SIGNUPS_ALLOWED: "false"
+      ADMIN_TOKEN: "$argon2id$v=19$m=19456,t=2,p=1$N0hwdGZXTEdnclRHMEdyTWFKcXkyZ08vbjVSMlZmamNKU1BIc053enBxWT0$WSMdM1yL/5STGaXQ6thUw0SC0/NekKt5ZAUTKK8WX6g"
+      SSO_ENABLED: "true"
+      SSO_ONLY: "false"
+      SSO_AUTHORITY: https://id.muffn.io
+      SSO_CLIENT_ID: 370dfd58-2a8a-44d3-9851-90dbec968f0d
+      SSO_CLIENT_SECRET: "{{ vaultwarden_sso_client_secret | trim }}"
+      SSO_SCOPES: "email profile"
+      SSO_SIGNUPS_MATCH_EMAIL: "true"
+      SSO_ALLOW_UNKNOWN_EMAIL_VERIFICATION: "false"
+      SSO_CLIENT_CACHE_EXPIRATION: "600"
+      SSO_PKCE: "true"
+      SSO_AUTH_ONLY_NOT_SESSION: "false"
+      IP_HEADER: cf-connecting-ip
+
+vaultwarden_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64633838613934666536613937616562356561353463323938366635393761343563643632663535
+          3830316637333636386432356634366536663061633664380a333162636138336137626330386633
+          39363963666664613435646639376563346665656639613466383162316230363463306330323531
+          3266323236393238320a303933343630376466623664396365363633626630623335343661623466
+          63303832313330623330343438303062333437653735396266616334393233393663
+
+vaultwarden_sso_client_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37353031313465636539383234663863366464613363363032616137633930356136633539393231
+          6332623165353834333539353439313438633530353635320a366263313563333136346565383536
+          34613833383561346361316661613132376462353435613839313463313162613464316234663537
+          3731383239383761640a643636366530663733653139363837356337663236366463616637323438
+          37616138366335346466386266353737613638356533373664636636373530366338346439326135
+          3032643235393736613435663536656361323233363365346563

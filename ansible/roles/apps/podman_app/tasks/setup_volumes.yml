@@ -1,5 +1,5 @@
 ---
-# Volume setup for {{ _app_name }}.
+# Volume setup and file deployment for {{ _app_name }}.
 # Tagged [volumes, setup], skipped on --tags image,deploy runs.
 # Runs on first deploy or when volumes/mounts change.
 
@@ -71,3 +71,16 @@
     - mount_source.stat is defined
     - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
     - not (mount_source.stat.exists and (mount_source.stat.mode | default('')) in ['1777', '01777'])
+
+- name: Deploy managed files for {{ _app_name }}
+  ansible.builtin.copy:
+    content: "{{ file_item.content }}"
+    dest: "{{ file_item.dest }}"
+    owner: "{{ file_item.owner | default('root') }}"
+    group: "{{ file_item.group | default('root') }}"
+    mode: "{{ file_item.mode | default('0640') }}"
+  loop: "{{ _app.files | default([]) }}"
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest }}"
+  tags: [volumes, setup]
