@@ -1,34 +1,4 @@
 ---
-proxmox_vmid: 202
-proxmox_node: pve04.aah.muffn.io
-
-podman_enabled: true
-
-podman_apps:
-  crowdsec-web-ui:
-    enabled: true
-    image: ghcr.io/theduffman85/crowdsec-web-ui
-    # renovate: datasource=docker depName=ghcr.io/theduffman85/crowdsec-web-ui
-    tag: 2026.3.6
-    description: CrowdSec Web UI
-    port: 3000
-    uid: 1000
-    gid: 1000
-    after:
-      - crowdsec.service
-    requires:
-      - crowdsec.service
-    volumes:
-      - /opt/crowdsec-web-ui/data:/app/data
-    env:
-      TZ: Europe/London
-      CROWDSEC_URL: http://host.containers.internal:8080
-      CROWDSEC_USER: "{{ crowdsec_web_ui_machine_name }}"
-      CROWDSEC_PASSWORD: "{{ crowdsec_web_ui_machine_password | trim }}"
-      CROWDSEC_SIMULATIONS_ENABLED: "true"
-      CROWDSEC_LOOKBACK_PERIOD: 7d
-      CROWDSEC_REFRESH_INTERVAL: 30s
-
 crowdsec_lapi_enabled: true
 crowdsec_lapi_db_name: crowdsec
 crowdsec_lapi_db_user: crowdsec

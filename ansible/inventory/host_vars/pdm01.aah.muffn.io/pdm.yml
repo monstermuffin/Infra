@@ -1,7 +1,4 @@
 ---
-proxmox_vmid: 201
-proxmox_node: pve03.aah.muffn.io
-
 pdm_enabled: true
 
 pdm_admin_password: !vault |
