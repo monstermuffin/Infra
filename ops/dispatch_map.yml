@@ -94,6 +94,9 @@ rules:
   - pattern: "ansible/inventory/host_vars/*/runner.yml"
     action: manual_notice
 
+  - pattern: "ansible/inventory/host_vars/*/meta.yml"
+    action: noop
+
   - pattern: "ansible/inventory/host_vars/*/linux.yml"
     action: host_linux
 

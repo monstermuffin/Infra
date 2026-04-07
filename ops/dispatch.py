@@ -77,6 +77,9 @@ def build_command(rule: dict, path: str) -> list[tuple[Path, str]]:
     if action == "playbook_self":
         return [(workdir, f"ansible-playbook {path.removeprefix(prefix)}")]
 
+    if action == "noop":
+        return []
+
     if action == "host_linux":
         linux_playbook = "ansible/playbooks/linux/manage.yml"
         workdir = get_workdir({"playbook": linux_playbook}, path)
