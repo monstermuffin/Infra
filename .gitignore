@@ -15,6 +15,7 @@ ansible/.venv
 *.key
 *.pem
 *.pfx
+*.tmp*
 .*au*
 *au*.md
 password*.txt
