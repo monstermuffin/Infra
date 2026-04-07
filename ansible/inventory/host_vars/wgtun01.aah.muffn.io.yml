@@ -97,7 +97,7 @@ podman_apps:
     enabled: true
     image: ghcr.io/monstermuffin/qsticky
     # renovate: datasource=docker depName=ghcr.io/monstermuffin/qsticky
-    tag: latest
+    tag: qbit-session
     network_mode: container:gluetun
     after:
       - gluetun.service
@@ -129,7 +129,7 @@ podman_apps:
           35666464336465303039383662616337633434303261626634336533653832663439626134666230
           6661303139336332660a383030336663646435666334333635613861393335353761373866636333
           62313935636435306162663365656436623330353062643361393365623364323635
-      LOG_LEVEL: INFO
+      LOG_LEVEL: DEBUG
 
   filebrowser:
     enabled: true
