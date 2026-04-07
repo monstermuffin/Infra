@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -186,15 +187,36 @@ def main(dry_run: bool = False) -> None:
 
 
 def _write_script(commands: list[tuple[Path, str]], dry_run: bool) -> None:
-    lines = ["#!/bin/bash", "set -euo pipefail", ""]
+    lines = [
+        "#!/bin/bash",
+        "set -uo pipefail",
+        "",
+        "failures=0",
+        "declare -a failed_commands=()",
+        "",
+    ]
 
     if not commands:
         lines.append("echo 'Nothing to run.'")
     else:
         for workdir, cmd in commands:
             lines.append(f'echo "==> [{workdir.name}] {cmd}"')
-            lines.append(f"(cd {workdir} && {cmd})")
+            lines.append(f"if ! (cd {shlex.quote(str(workdir))} && {cmd}); then")
+            lines.append("  ((failures+=1))")
+            lines.append(f"  failed_commands+=({shlex.quote(f'[{workdir.name}] {cmd}')})")
+            lines.append("fi")
             lines.append("")
+
+    lines.extend([
+        "if (( failures > 0 )); then",
+        '  echo ""',
+        '  echo "Dispatch completed with ${failures} failure(s):"',
+        '  for failed_command in "${failed_commands[@]}"; do',
+        '    echo "  - ${failed_command}"',
+        "  done",
+        "  exit 1",
+        "fi",
+    ])
 
     script = "\n".join(lines)
 

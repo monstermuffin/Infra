@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 # Unlock git-crypt and write vault password file
 echo "$GIT_CRYPT_KEY" | base64 -d | git-crypt unlock -
@@ -42,7 +42,17 @@ run_terraform() {
   terraform -chdir=tf apply -auto-approve -var-file=terraform.tfvars
 }
 
-if run_ansible && run_terraform; then
+overall_status=0
+
+if ! run_ansible; then
+  overall_status=1
+fi
+
+if ! run_terraform; then
+  overall_status=1
+fi
+
+if [ "$overall_status" -eq 0 ]; then
   echo "$SHA" > "$LAST_SHA_FILE"
   post_status "success" "Dispatch succeeded"
 else
