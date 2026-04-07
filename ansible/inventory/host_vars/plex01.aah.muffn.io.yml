@@ -6,12 +6,11 @@ podman_enabled: true
 podman_apps:
   plex:
     enabled: true
-    image: ghcr.io/home-operations/plex
-    # renovate: datasource=docker depName=ghcr.io/home-operations/plex
-    tag: 1.43.0.10492
+    image: plexinc/pms-docker
+    tag: plexpass
     port: 32400
-    uid: 65534
-    gid: 65534
+    uid: 1000
+    gid: 1000
     network_mode: host
     tmpfs:
       - /transcode
@@ -26,4 +25,7 @@ podman_apps:
       - /dev/dri/card0
     env:
       TZ: Europe/London
+      PLEX_UID: "1000"
+      PLEX_GID: "1000"
+      CHANGE_CONFIG_DIR_OWNERSHIP: "true"
       # PLEX_CLAIM_TOKEN: claim-xxxxxx
