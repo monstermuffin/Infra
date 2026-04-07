@@ -34,10 +34,52 @@ resource "technitium_zone" "aah" {
 # PVE nodes are not LXCs so the generator does not pick them up.
 locals {
   aah_infra_records = {
-    "pve02.aah.muffn.io" = "10.82.2.152"
-    "pve03.aah.muffn.io" = "10.82.2.153"
-    "pve04.aah.muffn.io" = "10.82.2.154"
+    "pve02.aah.muffn.io" = {
+      ip  = "10.82.2.152"
+      ttl = 3600
+    }
+    "pve03.aah.muffn.io" = {
+      ip  = "10.82.2.153"
+      ttl = 3600
+    }
+    "pve04.aah.muffn.io" = {
+      ip  = "10.82.2.154"
+      ttl = 3600
+    }
   }
+
+  aah_lxc_records = {
+    for r in var.lxc_dns_records : "${r.name}.${r.zone}" => {
+      ip  = r.ip
+      ttl = 300
+    } if r.zone == technitium_zone.aah.name
+  }
+
+  aah_host_records = merge(local.aah_infra_records, local.aah_lxc_records)
+
+  aah_reverse_records = {
+    for fqdn, record in local.aah_host_records : fqdn => {
+      ip  = record.ip
+      ttl = record.ttl
+      zone = format(
+        "%s.%s.%s.in-addr.arpa",
+        split(".", record.ip)[2],
+        split(".", record.ip)[1],
+        split(".", record.ip)[0],
+      )
+      name = format(
+        "%s.%s.%s.%s.in-addr.arpa",
+        split(".", record.ip)[3],
+        split(".", record.ip)[2],
+        split(".", record.ip)[1],
+        split(".", record.ip)[0],
+      )
+    }
+  }
+
+  aah_reverse_zones = toset([
+    for record in values(local.aah_reverse_records) : record.zone
+  ])
 }
 
 resource "technitium_record" "aah_infra" {
@@ -47,19 +89,41 @@ resource "technitium_record" "aah_infra" {
   zone  = technitium_zone.aah.name
   name  = each.key
   type  = "A"
-  value = each.value
-  ttl   = 3600
+  value = each.value.ip
+  ttl   = each.value.ttl
 }
 
 resource "technitium_record" "aah_lxc_hosts" {
-  for_each = { for r in var.lxc_dns_records : r.name => r if r.zone == "aah.muffn.io" }
+  for_each = local.aah_lxc_records
+  provider = technitium.aah
+
+  zone  = technitium_zone.aah.name
+  name  = each.key
+  type  = "A"
+  value = each.value.ip
+  ttl   = each.value.ttl
+
+  depends_on = [technitium_zone.aah]
+}
+
+resource "technitium_zone" "aah_reverse" {
+  for_each = local.aah_reverse_zones
+  provider = technitium.aah
+
+  name                   = each.value
+  type                   = "Primary"
+  soa_serial_date_scheme = true
+}
+
+resource "technitium_record" "aah_ptr" {
+  for_each = local.aah_reverse_records
   provider = technitium.aah
 
   zone  = each.value.zone
-  name  = "${each.value.name}.${each.value.zone}"
-  type  = "A"
-  value = each.value.ip
-  ttl   = 300
+  name  = each.value.name
+  type  = "PTR"
+  value = each.key
+  ttl   = each.value.ttl
 
-  depends_on = [technitium_zone.aah]
+  depends_on = [technitium_zone.aah_reverse]
 }
