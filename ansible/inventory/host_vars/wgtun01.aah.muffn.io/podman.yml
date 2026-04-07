@@ -1,5 +1,4 @@
 ---
-proxmox_node: pve04.aah.muffn.io
 dispatch_playbook: ansible/playbooks/lxc/deploy_wgtun.yml
 
 podman_enabled: true

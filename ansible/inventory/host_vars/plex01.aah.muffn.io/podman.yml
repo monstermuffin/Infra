@@ -1,6 +1,4 @@
 ---
-proxmox_node: pve02.aah.muffn.io
-
 podman_enabled: true
 
 podman_apps:
