@@ -2,6 +2,7 @@
 pve_lxcs: {}
 target: ""
 pve_lxc_target: ""
+pve_lxc_allow_duplicate_identifiers: false
 
 pve_api_host: "{{ ansible_host }}"
 pve_api_user: "root@pam"
