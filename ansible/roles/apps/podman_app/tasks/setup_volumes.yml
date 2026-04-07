@@ -37,11 +37,17 @@
     label: "{{ mount_source.vol | split(':') | first }}"
   vars:
     vol: "{{ mount_source.vol }}"
+  register: _bind_mount_dirs_result
   when:
     - mount_source.stat is defined
     - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
     - mount_source.stat.exists
     - (mount_source.stat.mode | default('')) in ['1777', '01777']
+
+- name: Track setup changes from existing bind mount directories for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _setup_changed: "{{ _setup_changed or (_bind_mount_dirs_result is changed) }}"
+  tags: [volumes, setup]
 
 - name: Create managed bind mount directories for {{ _app_name }}
   ansible.builtin.file:
@@ -67,10 +73,16 @@
     label: "{{ mount_source.vol | split(':') | first }}"
   vars:
     vol: "{{ mount_source.vol }}"
+  register: _managed_bind_mount_dirs_result
   when:
     - mount_source.stat is defined
     - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
     - not (mount_source.stat.exists and (mount_source.stat.mode | default('')) in ['1777', '01777'])
+
+- name: Track setup changes from managed bind mount directories for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _setup_changed: "{{ _setup_changed or (_managed_bind_mount_dirs_result is changed) }}"
+  tags: [volumes, setup]
 
 - name: Deploy managed files for {{ _app_name }}
   ansible.builtin.copy:
@@ -83,4 +95,10 @@
   loop_control:
     loop_var: file_item
     label: "{{ file_item.dest }}"
+  register: _managed_files_result
+  tags: [volumes, setup]
+
+- name: Track setup changes from managed files for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _setup_changed: "{{ _setup_changed or (_managed_files_result is changed) }}"
   tags: [volumes, setup]

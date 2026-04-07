@@ -1,4 +1,10 @@
 ---
+- name: Reset deploy change flags for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _image_changed: false
+    _setup_changed: false
+  tags: always
+
 - name: Set up bind mount directories for {{ _app_name }}
   ansible.builtin.include_tasks: setup_volumes.yml
   tags: [volumes, setup]
@@ -61,7 +67,7 @@
     state: stopped
   when:
     - _app.service_start | default(true)
-    - _quadlet_result.changed or _image_changed
+    - _quadlet_result.changed or _image_changed or _setup_changed
   failed_when: false
 
 - name: Enable and start service for {{ _app_name }}
@@ -78,7 +84,7 @@
   changed_when: false
   when:
     - _app.service_start | default(true)
-    - _quadlet_result.changed or _image_changed
+    - _quadlet_result.changed or _image_changed or _setup_changed
 
 - name: Wait for service port for {{ _app_name }}
   ansible.builtin.wait_for:
@@ -89,17 +95,17 @@
   when:
     - _app.service_start | default(true)
     - _app.port is defined
-    - _quadlet_result.changed or _image_changed
+    - _quadlet_result.changed or _image_changed or _setup_changed
 
 - name: Get service status for {{ _app_name }}
   ansible.builtin.systemd:
     name: "{{ _app_name }}.service"
   register: _service_status
-  when: _image_changed or _quadlet_result.changed
+  when: _image_changed or _quadlet_result.changed or _setup_changed
 
 - name: Display service status for {{ _app_name }}
   ansible.builtin.debug:
     msg:
       - "Service: {{ _app_name }}.service → {{ _service_status.status.ActiveState }}"
       - "Web UI: http://{{ ansible_host | default(inventory_hostname) }}:{{ _app.port | default('(no port)') }}"
-  when: _image_changed or _quadlet_result.changed
+  when: _image_changed or _quadlet_result.changed or _setup_changed
