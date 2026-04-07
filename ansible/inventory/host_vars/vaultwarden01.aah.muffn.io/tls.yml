@@ -1,4 +1,11 @@
 ---
+dispatch:
+  on_change:
+    playbook: ansible/playbooks/lxc/deploy_podman_app.yml
+    tags:
+      - setup
+      - deploy
+
 vaultwarden_tls_cert: |
   -----BEGIN CERTIFICATE-----
   MIIFWTCCA0GgAwIBAgIUbO0yAcQxH5qEQ7Gey8UpD22xVqAwDQYJKoZIhvcNAQEL
