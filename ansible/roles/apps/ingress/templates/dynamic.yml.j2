@@ -48,6 +48,16 @@ http:
           logLevel: "{{ ingress_log_level | lower }}"
 {% endif %}
 
+{% set tls_skip_verify_routes = ingress_routes | selectattr('service_insecure_skip_verify', 'defined') | selectattr('service_insecure_skip_verify') | list %}
+{% if tls_skip_verify_routes | length > 0 %}
+  serversTransports:
+{% for route in tls_skip_verify_routes %}
+{% set route_name = route.name | default(route.hostname | regex_replace('[^A-Za-z0-9]+', '-')) %}
+    {{ route_name }}-transport:
+      insecureSkipVerify: true
+{% endfor %}
+{% endif %}
+
   routers:
 {% for route in ingress_routes %}
 {% set route_name = route.name | default(route.hostname | regex_replace('[^A-Za-z0-9]+', '-')) %}
@@ -99,6 +109,9 @@ http:
 {% set route_name = route.name | default(route.hostname | regex_replace('[^A-Za-z0-9]+', '-')) %}
     {{ route_name }}:
       loadBalancer:
+{% if route.service_insecure_skip_verify | default(false) %}
+        serversTransport: {{ route_name }}-transport
+{% endif %}
         servers:
           - url: "{{ route.service_url }}"
 {% endfor %}

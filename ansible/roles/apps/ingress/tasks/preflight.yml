@@ -46,6 +46,10 @@
           'oidc_enabled': route_spec.value.oidc_enabled | default(false)
         }
         | combine(
+            (route_spec.value.service_insecure_skip_verify is defined)
+            | ternary({'service_insecure_skip_verify': route_spec.value.service_insecure_skip_verify}, {})
+          )
+        | combine(
             (route_spec.value.exempt_paths is defined)
             | ternary({'exempt_paths': route_spec.value.exempt_paths}, {})
           )
