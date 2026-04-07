@@ -90,7 +90,29 @@ rules:
   - pattern: "ansible/inventory/host_vars/pve*.yml"
     playbook: "ansible/playbooks/pve/system_config.yml"
 
-  # Split host_vars directories, e.g. host_vars/ingress01.aah.muffn.io/linux.yml
+  # Foldered host-specific files route by filename so dispatch scope stays precise
+  - pattern: "ansible/inventory/host_vars/*/runner.yml"
+    action: manual_notice
+
+  - pattern: "ansible/inventory/host_vars/*/linux.yml"
+    action: host_linux
+
+  - pattern: "ansible/inventory/host_vars/*/podman.yml"
+    action: host_self
+
+  - pattern: "ansible/inventory/host_vars/*/frigate.yml"
+    playbook: "ansible/playbooks/lxc/deploy_frigate_docker.yml"
+
+  - pattern: "ansible/inventory/host_vars/*/pbs.yml"
+    playbook: "ansible/playbooks/lxc/deploy_pbs.yml"
+
+  - pattern: "ansible/inventory/host_vars/*/pdm.yml"
+    playbook: "ansible/playbooks/lxc/deploy_pdm.yml"
+
+  - pattern: "ansible/inventory/host_vars/*/crowdsec.yml"
+    playbook: "ansible/playbooks/lxc/deploy_crowdsec_lapi.yml"
+
+  # Fallback for other split host_vars files that self-declare their deploy path
   - pattern: "ansible/inventory/host_vars/*/*.yml"
     action: host_self
 
