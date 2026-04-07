@@ -4,6 +4,7 @@ import os
 import shlex
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -21,15 +22,58 @@ DISPATCH_MAP = REPO_ROOT / "ops" / "dispatch_map.yml"
 OUTPUT_SCRIPT = Path("/tmp/dispatch_cmds.sh")
 
 
-def git_changed_files() -> list[str]:
+@dataclass(frozen=True)
+class CommandSpec:
+    workdir: Path
+    playbook: str
+    limit: str | None = None
+    tags: tuple[str, ...] = ()
+    extra_vars: tuple[tuple[str, str], ...] = ()
+
+    def merge_key(self) -> tuple[str, str, str | None, tuple[tuple[str, str], ...]]:
+        return (str(self.workdir), self.playbook, self.limit, self.extra_vars)
+
+    def merge(self, other: "CommandSpec") -> "CommandSpec":
+        merged_tags = tuple(dict.fromkeys((*self.tags, *other.tags)))
+        return CommandSpec(
+            workdir=self.workdir,
+            playbook=self.playbook,
+            limit=self.limit,
+            tags=merged_tags,
+            extra_vars=self.extra_vars,
+        )
+
+    def render(self) -> str:
+        prefix = self.workdir.name + "/"
+        cmd = f"ansible-playbook {self.playbook.removeprefix(prefix)}"
+        if self.limit:
+            cmd += f" --limit '{self.limit}'"
+        if self.tags:
+            cmd += f" --tags {','.join(self.tags)}"
+        for key, val in self.extra_vars:
+            cmd += f" -e {key}={val}"
+        return cmd
+
+
+def git_changed_files() -> list[tuple[str, str]]:
     before = os.environ.get("BEFORE_SHA", "").strip()
     # Use the push's before SHA to cover all commits in a multi-commit push.
     base = before if before and before != "0" * 40 else "HEAD~1"
     result = subprocess.run(
-        ["git", "diff", "--name-only", base, "HEAD"],
+        ["git", "diff", "--name-status", "--find-renames", base, "HEAD"],
         capture_output=True, text=True, cwd=REPO_ROOT, check=True,
     )
-    return [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    changed = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        changed.append((parts[0], parts[-1]))
+    return changed
+
+
+def change_kind(status: str) -> str:
+    return status[:1]
 
 
 def extract_limit(path: str, rule: dict) -> str | None:
@@ -69,43 +113,97 @@ def get_workdir(rule: dict, path: str) -> Path:
     return candidate if candidate.is_dir() else REPO_ROOT
 
 
-def build_command(rule: dict, path: str) -> list[tuple[Path, str]]:
+def _make_command(
+    playbook: str,
+    *,
+    path: str,
+    limit: str | None = None,
+    tags: list[str] | tuple[str, ...] | None = None,
+    extra_vars: dict[str, str] | None = None,
+    workdir: Path | None = None,
+) -> CommandSpec:
+    command_workdir = workdir or get_workdir({"playbook": playbook}, path)
+    command_tags = tuple(tags or ())
+    expanded_extra_vars = tuple(
+        (key, _expand_template(val, path))
+        for key, val in (extra_vars or {}).items()
+    )
+    return CommandSpec(
+        workdir=command_workdir,
+        playbook=playbook,
+        limit=limit,
+        tags=command_tags,
+        extra_vars=expanded_extra_vars,
+    )
+
+
+def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
     workdir = get_workdir(rule, path)
-    prefix = workdir.name + "/"
     action = rule.get("action")
 
     if action == "playbook_self":
-        return [(workdir, f"ansible-playbook {path.removeprefix(prefix)}")]
+        return [_make_command(path, path=path, workdir=workdir)]
 
     if action == "noop":
         return []
 
     if action == "host_linux":
         linux_playbook = "ansible/playbooks/linux/manage.yml"
-        workdir = get_workdir({"playbook": linux_playbook}, path)
         limit = extract_limit(path, {})
-        cmd = f"ansible-playbook {linux_playbook.removeprefix(workdir.name + '/')}"
-        if limit:
-            cmd += f" --limit '{limit}'"
-        return [(workdir, cmd)]
+        return [_make_command(linux_playbook, path=path, limit=limit)]
 
     if action == "host_self":
-        return _build_host_self_commands(path)
+        return _build_host_self_commands(path, status)
 
     playbook = rule.get("playbook")
     if not playbook:
         return []
 
     limit = extract_limit(path, rule)
-    cmd = f"ansible-playbook {playbook.removeprefix(prefix)}"
-    if limit:
-        cmd += f" --limit '{limit}'"
-    for key, val in rule.get("extra_vars", {}).items():
-        cmd += f" -e {key}={_expand_template(val, path)}"
-    return [(workdir, cmd)]
+    return [
+        _make_command(
+            playbook,
+            path=path,
+            limit=limit,
+            extra_vars=rule.get("extra_vars"),
+            workdir=workdir,
+        )
+    ]
 
 
-def _build_host_self_commands(path: str) -> list[tuple[Path, str]]:
+def _dispatch_entries(dispatch_config: dict | list | None, status: str) -> list[dict]:
+    if not dispatch_config:
+        return []
+    selected = dispatch_config
+    if isinstance(dispatch_config, dict) and any(
+        key in dispatch_config for key in ("on_add", "on_change", "on_delete")
+    ):
+        event_key = {
+            "A": "on_add",
+            "D": "on_delete",
+        }.get(change_kind(status), "on_change")
+        selected = dispatch_config.get(event_key, [])
+    if isinstance(selected, dict):
+        selected = [selected]
+    return [entry for entry in selected if isinstance(entry, dict) and entry.get("playbook")]
+
+
+def _build_dispatch_commands(path: str, limit: str | None, dispatch_config: dict | list, status: str) -> list[CommandSpec]:
+    commands = []
+    for entry in _dispatch_entries(dispatch_config, status):
+        commands.append(
+            _make_command(
+                entry["playbook"],
+                path=path,
+                limit=limit,
+                tags=entry.get("tags"),
+                extra_vars=entry.get("extra_vars"),
+            )
+        )
+    return commands
+
+
+def _build_host_self_commands(path: str, status: str) -> list[CommandSpec]:
     try:
         with open(REPO_ROOT / path) as f:
             host_vars = yaml.safe_load(f) or {}
@@ -118,21 +216,28 @@ def _build_host_self_commands(path: str) -> list[tuple[Path, str]]:
 
     custom_playbook = host_vars.get("dispatch_playbook")
     if custom_playbook:
-        workdir = get_workdir({"playbook": custom_playbook}, path)
-        cmd = f"ansible-playbook {custom_playbook.removeprefix(workdir.name + '/')}"
-        if limit:
-            cmd += f" --limit '{limit}'"
-        commands.append((workdir, cmd))
+        commands.append(_make_command(custom_playbook, path=path, limit=limit))
 
     if "podman_apps" in host_vars:
-        podman_playbook = "ansible/playbooks/lxc/deploy_podman_app.yml"
-        workdir = get_workdir({"playbook": podman_playbook}, path)
-        cmd = f"ansible-playbook {podman_playbook.removeprefix(workdir.name + '/')}"
-        if limit:
-            cmd += f" --limit '{limit}'"
-        # Scope to deploy path only
-        cmd += " --tags image,deploy"
-        commands.append((workdir, cmd))
+        if change_kind(status) == "A":
+            commands.append(
+                _make_command(
+                    "ansible/playbooks/lxc/update_podman_packages.yml",
+                    path=path,
+                    limit=limit,
+                )
+            )
+        commands.append(
+            _make_command(
+                "ansible/playbooks/lxc/deploy_podman_app.yml",
+                path=path,
+                limit=limit,
+                tags=["setup", "image", "deploy"],
+            )
+        )
+
+    if host_vars.get("dispatch"):
+        commands.extend(_build_dispatch_commands(path, limit, host_vars["dispatch"], status))
 
     if not commands:
         print(f"  WARNING: {path} matched host_self but has no dispatch_playbook or podman_apps — skipping")
@@ -152,20 +257,22 @@ def main(dry_run: bool = False) -> None:
 
     rules = config["rules"]
     # Dict keyed by "workdir:cmd" to deduplicate while preserving order
-    commands: dict[str, tuple[Path, str]] = {}
+    commands: dict[tuple[str, str, str | None, tuple[tuple[str, str], ...]], CommandSpec] = {}
     notices: list[str] = []
 
-    for path in changed:
+    for status, path in changed:
         for rule in rules:
             if Path(path).match(rule["pattern"]):
                 if rule.get("action") == "manual_notice":
                     note = rule.get("note", f"Manual action required for {path}")
                     notices.append(_expand_template(note, path))
                     break
-                for workdir, cmd in build_command(rule, path):
-                    key = f"{workdir}:{cmd}"
-                    if key not in commands:
-                        commands[key] = (workdir, cmd)
+                for command in build_command(rule, path, status):
+                    key = command.merge_key()
+                    if key in commands:
+                        commands[key] = commands[key].merge(command)
+                    else:
+                        commands[key] = command
                 break  # first matching rule wins
 
     if not commands:
@@ -178,8 +285,8 @@ def main(dry_run: bool = False) -> None:
         return
 
     print(f"Dispatching {len(commands)} run(s):")
-    for workdir, cmd in commands.values():
-        print(f"  [{workdir.name}] → {cmd}")
+    for command in commands.values():
+        print(f"  [{command.workdir.name}] → {command.render()}")
 
     if notices:
         print("Manual follow-up required:")
@@ -189,7 +296,7 @@ def main(dry_run: bool = False) -> None:
     _write_script(list(commands.values()), dry_run)
 
 
-def _write_script(commands: list[tuple[Path, str]], dry_run: bool) -> None:
+def _write_script(commands: list[CommandSpec], dry_run: bool) -> None:
     lines = [
         "#!/bin/bash",
         "set -uo pipefail",
@@ -202,11 +309,12 @@ def _write_script(commands: list[tuple[Path, str]], dry_run: bool) -> None:
     if not commands:
         lines.append("echo 'Nothing to run.'")
     else:
-        for workdir, cmd in commands:
-            lines.append(f'echo "==> [{workdir.name}] {cmd}"')
-            lines.append(f"if ! (cd {shlex.quote(str(workdir))} && {cmd}); then")
+        for command in commands:
+            cmd = command.render()
+            lines.append(f'echo "==> [{command.workdir.name}] {cmd}"')
+            lines.append(f"if ! (cd {shlex.quote(str(command.workdir))} && {cmd}); then")
             lines.append("  ((failures+=1))")
-            lines.append(f"  failed_commands+=({shlex.quote(f'[{workdir.name}] {cmd}')})")
+            lines.append(f"  failed_commands+=({shlex.quote(f'[{command.workdir.name}] {cmd}')})")
             lines.append("fi")
             lines.append("")
 
