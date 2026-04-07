@@ -6,3 +6,9 @@ ansible_python_interpreter: /usr/bin/python3
 ansible_ssh_common_args: >-
   -o StrictHostKeyChecking=no
   -o UserKnownHostsFile=/dev/null
+pve_cluster_domain: >-
+  {{
+    inventory_hostname.split('.', 1)[1]
+    if (inventory_hostname is string and '.' in inventory_hostname)
+    else ''
+  }}
