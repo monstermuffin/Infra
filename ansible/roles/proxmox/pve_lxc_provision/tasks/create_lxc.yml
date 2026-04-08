@@ -70,6 +70,9 @@
       {% for mp_key, mp_val in _lxc_bind_mounts.items() %}
       --{{ mp_key }} {{ mp_val }}
       {% endfor %}
+      {% for mp_key, mp_val in _lxc_managed_mounts.items() %}
+      --{{ mp_key }} {{ mp_val }}
+      {% endfor %}
       {% for dev_key, dev_val in _lxc_devices.items() %}
       --{{ dev_key }} {{ dev_val }}
       {% endfor %}

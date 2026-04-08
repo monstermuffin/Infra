@@ -71,6 +71,29 @@
   loop_control:
     index_var: idx
 
+- name: "Initialize managed mount args — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mounts: {}
+
+- name: "Build managed mount args — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mounts: >-
+      {{
+        _lxc_managed_mounts | combine({
+          'mp' ~ (idx + (_lxc.bind_mounts | default([]) | length)): (
+            item.storage ~ ':'
+            ~ (item.size | regex_replace('[^0-9]', ''))
+            ~ ',mp=' ~ item.lxc_path
+            ~ (',backup=0' if not (item.backup | default(true)) else '')
+            ~ (',replicate=0' if not (item.replicate | default(true)) else '')
+            ~ (',ro=1' if item.readonly | default(false) else '')
+          )
+        })
+      }}
+  loop: "{{ _lxc.managed_mounts | default([]) }}"
+  loop_control:
+    index_var: idx
+
 - name: "Initialize device passthrough args — {{ _lxc_name }}"
   ansible.builtin.set_fact:
     _lxc_devices: {}
@@ -185,7 +208,7 @@
 
 - name: "Determine if bind mounts need updating — {{ _lxc_name }}"
   ansible.builtin.set_fact:
-    _lxc_mounts_need_update: >-
+    _lxc_bind_mounts_need_update: >-
       {{
         _lxc_exists and _lxc_bind_mounts | length > 0 and (
           (_lxc_bind_mounts.items() | list | difference(
@@ -197,6 +220,114 @@
       }}
   vars:
     _lxc_cfg: "{{ (_lxc_current_config_raw.stdout | default('{}')) | from_json }}"
+  when: _lxc_exists
+
+- name: "Determine if managed mount points need updating — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_current_managed_mount_paths: []
+  when: _lxc_exists
+
+- name: "Collect current managed mount paths — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_current_managed_mount_paths: >-
+      {{
+        _lxc_current_managed_mount_paths + [_current_mp_path]
+      }}
+  loop: >-
+    {{
+      (_lxc_cfg | dict2items)
+      | selectattr('key', 'match', '^mp[0-9]+$')
+      | list
+    }}
+  vars:
+    _lxc_cfg: "{{ (_lxc_current_config_raw.stdout | default('{}')) | from_json }}"
+    _current_mp_path: >-
+      {{
+        (
+          item.value.split(',')
+          | select('match', '^mp=')
+          | map('regex_replace', '^mp=', '')
+          | list
+          | first
+        ) | default('')
+      }}
+  when: _lxc_exists and (_current_mp_path | length > 0)
+
+- name: "Determine if managed mount points need updating — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mounts_need_update: >-
+      {{
+        _lxc_exists and (
+          (
+            _lxc.managed_mounts | default([])
+            | rejectattr(
+                'lxc_path',
+                'in',
+                (_lxc_current_managed_mount_paths | default([]))
+              )
+            | list
+            | length
+          ) > 0
+        )
+      }}
+  when: _lxc_exists
+
+- name: "Initialize managed mount resize targets — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mount_resize_targets: []
+  when: _lxc_exists
+
+- name: "Determine managed mount resize targets — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mount_resize_targets: >-
+      {{
+        _lxc_managed_mount_resize_targets + [
+          {
+            'key': _current_mp.key,
+            'lxc_path': item.lxc_path,
+            'current_gb': (_current_size_raw | int),
+            'desired_gb': _desired_size_gb
+          }
+        ]
+      }}
+  loop: "{{ _lxc.managed_mounts | default([]) }}"
+  vars:
+    _lxc_cfg: "{{ (_lxc_current_config_raw.stdout | default('{}')) | from_json }}"
+    _desired_size_gb: "{{ item.size | regex_replace('[^0-9]', '') | int }}"
+    _current_mp: >-
+      {{
+        (
+          _lxc_cfg | dict2items
+          | selectattr('key', 'match', '^mp[0-9]+$')
+          | selectattr('value', 'search', '(?:^|,)mp=' ~ item.lxc_path ~ '(?:,|$)')
+          | list
+          | first
+        ) | default({})
+      }}
+    _current_size_raw: >-
+      {{
+        ((_current_mp.value | default(''))
+        | regex_search('(?:^|,)size=([0-9]+)G(?:,|$)', '\1') or [])
+        | first | default('0')
+      }}
+  when: >-
+    _lxc_exists and
+    (_current_mp | length > 0) and
+    ((_current_size_raw | int) < _desired_size_gb)
+
+- name: "Determine if managed mount points need resizing — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_managed_mounts_need_resize: "{{ (_lxc_managed_mount_resize_targets | length) > 0 }}"
+  when: _lxc_exists
+
+- name: "Combine mount update requirements — {{ _lxc_name }}"
+  ansible.builtin.set_fact:
+    _lxc_mounts_need_update: >-
+      {{
+        (_lxc_bind_mounts_need_update | default(false)) or
+        (_lxc_managed_mounts_need_update | default(false)) or
+        (_lxc_managed_mounts_need_resize | default(false))
+      }}
   when: _lxc_exists
 
 - name: "Determine if device passthrough needs updating — {{ _lxc_name }}"
@@ -379,7 +510,29 @@
     line: "{{ item.key }}: {{ item.value }}"
   loop: "{{ _lxc_bind_mounts | dict2items }}"
   delegate_to: "{{ _lxc_delegate_host }}"
-  when: _lxc_exists and (_lxc_mounts_need_update | default(false) | bool)
+  when: _lxc_exists and (_lxc_bind_mounts_need_update | default(false) | bool)
+
+- name: "Update managed mount points — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pct set {{ _lxc.vmid }}
+      --{{ item.key }} {{ item.value }}
+  loop: "{{ _lxc_managed_mounts | dict2items }}"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_managed_mounts_update
+  changed_when: _lxc_managed_mounts_update is not skipped
+  when: _lxc_exists and (_lxc_managed_mounts_need_update | default(false) | bool)
+
+- name: "Resize managed mount points — {{ _lxc_name }}"
+  become: true
+  ansible.builtin.command:
+    cmd: "pct resize {{ _lxc.vmid }} {{ item.key }} {{ item.desired_gb }}G"
+  loop: "{{ _lxc_managed_mount_resize_targets | default([]) }}"
+  delegate_to: "{{ _lxc_delegate_host }}"
+  register: _lxc_managed_mounts_resize
+  changed_when: _lxc_managed_mounts_resize is not skipped
+  when: _lxc_exists and (_lxc_managed_mounts_need_resize | default(false) | bool)
 
 # Device passthrough (dev[n]) can be set without stopping the container, LXC restart needed to show tho
 - name: "Update device passthrough — {{ _lxc_name }}"
