@@ -9,9 +9,9 @@
     {
       "customType": "regex",
       "description": "Match renovate tags for container images",
-      "fileMatch": [
-        "(^|/)ansible/inventory/.+\\.ya?ml$",
-        "(^|/)ansible/roles/.+/defaults/main\\.yml$"
+      "managerFilePatterns": [
+        "/(^|/)ansible/inventory/.+\\.ya?ml$/",
+        "/(^|/)ansible/roles/.+/defaults/main\\.yml$/"
       ],
       "matchStrings": [
         "# renovate:\\s+datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
@@ -20,8 +20,8 @@
     {
       "customType": "regex",
       "description": "Match renovate tags for Debian package pins",
-      "fileMatch": [
-        "(^|/)ansible/inventory/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/(^|/)ansible/inventory/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "# renovate:\\s+suite=(?<suite>\\S+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
@@ -33,8 +33,8 @@
     {
       "customType": "regex",
       "description": "Match renovate tags for Debian package pins with explicit arch",
-      "fileMatch": [
-        "(^|/)ansible/inventory/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/(^|/)ansible/inventory/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "# renovate:\\s+suite=(?<suite>\\S+) arch=(?<arch>\\S+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+:\\s+\"?(?<currentValue>[^\"\\s#]+)\"?"
