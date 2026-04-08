@@ -1,0 +1,72 @@
+---
+podman_enabled: true
+
+podman_networks:
+  sunrise: {}
+
+podman_apps:
+  sunrise-db:
+    enabled: true
+    image: mariadb
+    # renovate: datasource=docker depName=mariadb
+    tag: "11.7.2"
+    container_name: sunrise-db
+    network: sunrise
+    uid: 999
+    gid: 999
+    volumes:
+      - /opt/sunriseweb/db:/var/lib/mysql
+    env:
+      TZ: Europe/London
+      MYSQL_ROOT_PASSWORD: "{{ sunrise_mysql_root_password | trim }}"
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: "{{ sunrise_db_password | trim }}"
+
+  sunrise:
+    enabled: true
+    image: wordpress
+    # renovate: datasource=docker depName=wordpress
+    tag: php8.2-apache
+    container_name: sunrise
+    port: 8080
+    container_port: 80
+    network: sunrise
+    uid: 33
+    gid: 33
+    after:
+      - sunrise-db.service
+    requires:
+      - sunrise-db.service
+    volumes:
+      - /opt/sunriseweb/html:/var/www/html
+    env:
+      TZ: Europe/London
+      WORDPRESS_DB_HOST: sunrise-db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: "{{ sunrise_db_password | trim }}"
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: >-
+        define('WP_MEMORY_LIMIT', '256M'); define('WP_MAX_MEMORY_LIMIT', '256M');
+        define('UPLOAD_MAX_FILESIZE', '64M'); define('POST_MAX_SIZE', '64M');
+        define('MAX_EXECUTION_TIME', 300);
+
+sunrise_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64373933383062333261383061643737306631356138303665343562376130336335333437393335
+          3565313034623635323134323338343137363866386363620a303962623532626434353535383538
+          61306439336531653433353839363861636166343030376332376232326635613130323232306234
+          3338336262343766660a363139303062333963616331633861643565656431346465356434373036
+          35613162653439373333393566666661616137313966333430616637393638633862613135323838
+          66303032313932623566316333626161303730376336363437353765393566346362356138663661
+          666132323138373434336631626333623132
+
+sunrise_mysql_root_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38363539343931306336326164393139313039633362646531386434613037396538346635623338
+          3735616435633737316332313239663236353565383531620a643362383931353764643331363136
+          32333633383531303938323635336632613964356231366565353765656236646331303831376562
+          3337323961386266650a616436396538623731396264393330663063336661383831313430346535
+          34303736343031356466353035643361373331653765636238616235383430666535383164363336
+          33626233396431613661656566626265303837346338326466623933396530333033613734633631
+          383838396236313835623863646661613230
