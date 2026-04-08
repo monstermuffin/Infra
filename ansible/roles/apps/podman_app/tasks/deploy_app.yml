@@ -80,7 +80,11 @@
 - name: Reload Podman network rules for {{ _app_name }}
   # noqa: no-handler
   ansible.builtin.command:
-    cmd: podman network reload --all
+    argv:
+      - podman
+      - network
+      - reload
+      - "{{ _app.container_name | default(_app_name) }}"
   changed_when: false
   when:
     - _app.service_start | default(true)
