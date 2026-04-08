@@ -41,3 +41,7 @@ jobs:
           ansible-lint
         working-directory: ansible
 
+      - name: Validate LXC inventory identifiers
+        run: |
+          . $GITHUB_WORKSPACE/.venv/bin/activate
+          python ops/lxc_inventory.py --check-duplicates

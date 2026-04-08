@@ -25,6 +25,17 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && (github.event.pull_request.merge_commit_sha || github.sha) || github.ref }}
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install validation dependencies
+        run: pip install PyYAML
+
+      - name: Validate LXC inventory identifiers
+        run: python ops/lxc_inventory.py --check-duplicates
+
       - name: Run dispatch
         env:
           BEFORE_SHA: ${{ github.event_name == 'push' && github.event.before || github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}

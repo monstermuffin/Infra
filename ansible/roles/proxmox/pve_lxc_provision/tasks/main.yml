@@ -22,53 +22,6 @@
     | selectattr('key', 'match', '^pve_lxcs_') | list | length > 0
   tags: [always]
 
-- name: Detect duplicate LXC VMIDs
-  ansible.builtin.set_fact:
-    _pve_lxc_duplicate_vmids: >-
-      {%- set ns = namespace(seen={}, duplicates=[]) -%}
-      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
-        {%- set vmid = item.value.vmid | string -%}
-        {%- if vmid in ns.seen -%}
-          {%- set _ = ns.duplicates.append(vmid ~ ' (' ~ ns.seen[vmid] ~ ', ' ~ item.key ~ ')') -%}
-        {%- else -%}
-          {%- set _ = ns.seen.update({vmid: item.key}) -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ ns.duplicates }}
-  when: pve_lxcs is defined and pve_lxcs | length > 0
-  tags: [always]
-
-- name: Detect duplicate LXC hostnames
-  ansible.builtin.set_fact:
-    _pve_lxc_duplicate_hostnames: >-
-      {%- set ns = namespace(seen={}, duplicates=[]) -%}
-      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
-        {%- set hostname = item.value.hostname | default(item.key) -%}
-        {%- if hostname in ns.seen -%}
-          {%- set _ = ns.duplicates.append(hostname ~ ' (' ~ ns.seen[hostname] ~ ', ' ~ item.key ~ ')') -%}
-        {%- else -%}
-          {%- set _ = ns.seen.update({hostname: item.key}) -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ ns.duplicates }}
-  when: pve_lxcs is defined and pve_lxcs | length > 0
-  tags: [always]
-
-- name: Fail on duplicate LXC identifiers
-  ansible.builtin.fail:
-    msg: >-
-      Duplicate LXC definitions were found.
-      Duplicate VMIDs: {{ _pve_lxc_duplicate_vmids | default([]) | join(', ') | default('none', true) }}.
-      Duplicate hostnames: {{ _pve_lxc_duplicate_hostnames | default([]) | join(', ') | default('none', true) }}.
-      Each managed LXC must have a unique vmid and hostname.
-      To bypass this temporarily for recovery work, run with
-      `-e pve_lxc_allow_duplicate_identifiers=true`.
-  when:
-    - pve_lxcs is defined and pve_lxcs | length > 0
-    - (_pve_lxc_duplicate_vmids | default([]) | length > 0) or (_pve_lxc_duplicate_hostnames | default([]) | length > 0)
-    - not (pve_lxc_allow_duplicate_identifiers | bool)
-  tags: [always]
-
 - name: Filter LXC map by requested selector
   ansible.builtin.set_fact:
     _pve_lxcs_effective: >-
@@ -104,6 +57,120 @@
   when:
     - _pve_lxc_effective_target | length > 0
     - _pve_lxcs_effective | length > 0
+  tags: [always]
+
+- name: Detect duplicate LXC VMIDs
+  ansible.builtin.set_fact:
+    _pve_lxc_duplicate_vmids: >-
+      {%- set ns = namespace(seen={}, duplicates=[]) -%}
+      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
+        {%- set vmid = item.value.vmid | string -%}
+        {%- if vmid in ns.seen -%}
+          {%- set _ = ns.duplicates.append(vmid ~ ' (' ~ ns.seen[vmid] ~ ', ' ~ item.key ~ ')') -%}
+        {%- else -%}
+          {%- set _ = ns.seen.update({vmid: item.key}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.duplicates }}
+  when: pve_lxcs is defined and pve_lxcs | length > 0
+  tags: [always]
+
+- name: Detect selected LXC VMID conflicts
+  ansible.builtin.set_fact:
+    _pve_lxc_selected_duplicate_vmids: >-
+      {%- set selected_vmids = (_pve_lxcs_effective | dict2items | map(attribute='value.vmid') | map('string') | unique | list) -%}
+      {%- set ns = namespace(seen={}, duplicates=[]) -%}
+      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
+        {%- set vmid = item.value.vmid | string -%}
+        {%- if vmid in selected_vmids -%}
+          {%- if vmid in ns.seen -%}
+            {%- set _ = ns.duplicates.append(vmid ~ ' (' ~ ns.seen[vmid] ~ ', ' ~ item.key ~ ')') -%}
+          {%- else -%}
+            {%- set _ = ns.seen.update({vmid: item.key}) -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.duplicates }}
+  when:
+    - pve_lxcs is defined and pve_lxcs | length > 0
+    - _pve_lxc_effective_target | length > 0
+    - _pve_lxcs_effective | length > 0
+  tags: [always]
+
+- name: Detect duplicate LXC hostnames
+  ansible.builtin.set_fact:
+    _pve_lxc_duplicate_hostnames: >-
+      {%- set ns = namespace(seen={}, duplicates=[]) -%}
+      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
+        {%- set hostname = item.value.hostname | default(item.key) -%}
+        {%- if hostname in ns.seen -%}
+          {%- set _ = ns.duplicates.append(hostname ~ ' (' ~ ns.seen[hostname] ~ ', ' ~ item.key ~ ')') -%}
+        {%- else -%}
+          {%- set _ = ns.seen.update({hostname: item.key}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.duplicates }}
+  when: pve_lxcs is defined and pve_lxcs | length > 0
+  tags: [always]
+
+- name: Detect selected LXC hostname conflicts
+  ansible.builtin.set_fact:
+    _pve_lxc_selected_duplicate_hostnames: >-
+      {%- set selected_hostnames = (_pve_lxcs_effective | dict2items | map(attribute='value.hostname') | map('default', '', true) | unique | list) -%}
+      {%- set ns = namespace(seen={}, duplicates=[]) -%}
+      {%- for item in (pve_lxcs | default({}) | dict2items) -%}
+        {%- set hostname = item.value.hostname | default(item.key) -%}
+        {%- if hostname in selected_hostnames -%}
+          {%- if hostname in ns.seen -%}
+            {%- set _ = ns.duplicates.append(hostname ~ ' (' ~ ns.seen[hostname] ~ ', ' ~ item.key ~ ')') -%}
+          {%- else -%}
+            {%- set _ = ns.seen.update({hostname: item.key}) -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.duplicates }}
+  when:
+    - pve_lxcs is defined and pve_lxcs | length > 0
+    - _pve_lxc_effective_target | length > 0
+    - _pve_lxcs_effective | length > 0
+  tags: [always]
+
+- name: Fail on duplicate LXC identifiers
+  ansible.builtin.fail:
+    msg: >-
+      Duplicate LXC definitions were found.
+      Duplicate VMIDs: {{
+        (_pve_lxc_effective_target | length > 0)
+        | ternary(
+            _pve_lxc_selected_duplicate_vmids | default([]) | join(', ') | default('none', true),
+            _pve_lxc_duplicate_vmids | default([]) | join(', ') | default('none', true)
+          )
+      }}.
+      Duplicate hostnames: {{
+        (_pve_lxc_effective_target | length > 0)
+        | ternary(
+            _pve_lxc_selected_duplicate_hostnames | default([]) | join(', ') | default('none', true),
+            _pve_lxc_duplicate_hostnames | default([]) | join(', ') | default('none', true)
+          )
+      }}.
+      Each managed LXC must have a unique vmid and hostname.
+      To bypass run with
+      `-e pve_lxc_allow_duplicate_identifiers=true`.
+  when:
+    - pve_lxcs is defined and pve_lxcs | length > 0
+    - >-
+      (
+        (_pve_lxc_effective_target | length == 0) and (
+          (_pve_lxc_duplicate_vmids | default([]) | length > 0) or
+          (_pve_lxc_duplicate_hostnames | default([]) | length > 0)
+        )
+      ) or (
+        (_pve_lxc_effective_target | length > 0) and (
+          (_pve_lxc_selected_duplicate_vmids | default([]) | length > 0) or
+          (_pve_lxc_selected_duplicate_hostnames | default([]) | length > 0)
+        )
+      )
+    - not (pve_lxc_allow_duplicate_identifiers | bool)
   tags: [always]
 
 - name: Skip host if pve_lxcs is not defined

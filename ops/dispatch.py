@@ -56,9 +56,15 @@ class CommandSpec:
 
 
 def git_changed_files() -> list[tuple[str, str]]:
+    last_successful = os.environ.get("LAST_SUCCESSFUL_SHA", "").strip()
     before = os.environ.get("BEFORE_SHA", "").strip()
-    # Use the push's before SHA to cover all commits in a multi-commit push.
-    base = before if before and before != "0" * 40 else "HEAD~1"
+    # Prefer the last successful deploy SHA to retry failed deploys
+    if last_successful:
+        base = last_successful
+    elif before and before != "0" * 40:
+        base = before
+    else:
+        base = "HEAD~1"
     result = subprocess.run(
         ["git", "diff", "--name-status", "--find-renames", base, "HEAD"],
         capture_output=True, text=True, cwd=REPO_ROOT, check=True,

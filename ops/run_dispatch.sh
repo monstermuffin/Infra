@@ -9,6 +9,7 @@ chmod 600 /tmp/.vault_password
 SHA=$(git rev-parse HEAD)
 LAST_SHA_FILE="/opt/github-runner/last_dispatched_sha"
 LAST_SHA=$(cat "$LAST_SHA_FILE" 2>/dev/null || echo "")
+export LAST_SUCCESSFUL_SHA="$LAST_SHA"
 
 # Skip if already processed commit
 if [ "$SHA" = "$LAST_SHA" ]; then
