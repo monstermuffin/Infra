@@ -1,0 +1,15 @@
+---
+podman_enabled: true
+
+podman_apps:
+  pinchflat:
+    enabled: true
+    image: ghcr.io/kieraneglin/pinchflat
+    # renovate: datasource=docker depName=ghcr.io/kieraneglin/pinchflat
+    tag: latest
+    port: 8945
+    volumes:
+      - /opt/pinchflat:/config
+      - /mnt/youtube:/downloads
+    env:
+      TZ: Europe/London

@@ -1,0 +1,29 @@
+---
+pve_lxcs_pinchflat01:
+  pinchflat01:
+    vmid: 141
+    hostname: pinchflat01.aah.muffn.io
+    node: pve03
+    cores: 4
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.82.10.141/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    runtime: podman
+    tags:
+      - ansible
+      - os_linux
+      - os_trixie
+      - site_aah
+      - podman_app
+      - app_pinchflat
+    features: "{{ lxc_features_podman }}"
+    bind_mounts:
+      - host_path: /mnt/aah-fs01/media/youtube
+        lxc_path: /mnt/youtube
+        shared: true
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
