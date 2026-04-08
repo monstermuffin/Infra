@@ -5,7 +5,7 @@ pve_lxcs_rembg01:
     hostname: rembg01.aah.muffn.io
     node: pve03
     cores: 4
-    memory: 2048
+    memory: 6144
     swap: 2048
     disk: "16G"
     network_ip: "10.82.10.131/24"
