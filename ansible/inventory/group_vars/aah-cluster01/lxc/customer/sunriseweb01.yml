@@ -1,7 +1,7 @@
 ---
 pve_lxcs_sunriseweb01:
   sunriseweb01:
-    vmid: 140
+    vmid: 308
     hostname: sunriseweb01.aah.muffn.io
     node: pve04
     cores: 2
@@ -9,9 +9,9 @@ pve_lxcs_sunriseweb01:
     swap: 512
     disk: "32G"
     storage: "local-zfs"
-    network_ip: "10.82.10.140/24"
-    network_gw: "10.82.10.1"
-    network_vlan: 710
+    network_ip: "10.82.3.108/24"
+    network_gw: "10.82.3.100"
+    network_vlan: 703
     unprivileged: true
     runtime: podman
     tags:
