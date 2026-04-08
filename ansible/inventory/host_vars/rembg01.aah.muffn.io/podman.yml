@@ -13,6 +13,6 @@ podman_apps:
     volumes:
       - /opt/rembg/models:/root/.u2net
     env:
-      MODEL: birefnet-general-lite
+      MODEL: bria-rmbg
       OMP_NUM_THREADS: "4"
       TZ: Europe/London
