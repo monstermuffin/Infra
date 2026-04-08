@@ -84,6 +84,79 @@
     _setup_changed: "{{ _setup_changed or (_managed_bind_mount_dirs_result is changed) }}"
   tags: [volumes, setup]
 
+- name: Inspect managed file destinations for {{ _app_name }}
+  ansible.builtin.stat:
+    path: "{{ file_item.dest }}"
+  loop: "{{ _app.files | default([]) }}"
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest }}"
+  register: _managed_file_destinations
+  tags: [volumes, setup]
+
+- name: Create parent directories for managed files for {{ _app_name }}
+  ansible.builtin.file:
+    path: "{{ file_item.dest | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ _app.files | default([]) }}"
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest | dirname }}"
+  register: _managed_file_parent_dirs_result
+  tags: [volumes, setup]
+
+- name: Track setup changes from managed file parent directories for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _setup_changed: "{{ _setup_changed or (_managed_file_parent_dirs_result is changed) }}"
+  tags: [volumes, setup]
+
+- name: Remove stale directory placeholders for managed file bind mounts for {{ _app_name }}
+  ansible.builtin.file:
+    path: "{{ file_item.dest }}"
+    state: absent
+  loop: "{{ _managed_file_destinations.results | default([]) }}"
+  loop_control:
+    loop_var: managed_file_stat
+    label: "{{ managed_file_stat.file_item.dest }}"
+  vars:
+    file_item: "{{ managed_file_stat.file_item }}"
+    _volume_source_paths: "{{ _app.volumes | default([]) | map('split', ':') | map('first') | list }}"
+  register: _managed_file_cleanup_result
+  when:
+    - managed_file_stat.stat.isdir | default(false)
+    - file_item.dest in _volume_source_paths
+    - file_item.dest | basename is search('\\.')
+  tags: [volumes, setup]
+
+- name: Track setup changes from managed file cleanup for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _setup_changed: "{{ _setup_changed or (_managed_file_cleanup_result is changed) }}"
+  tags: [volumes, setup]
+
+- name: Re-inspect managed file destinations for {{ _app_name }}
+  ansible.builtin.stat:
+    path: "{{ file_item.dest }}"
+  loop: "{{ _app.files | default([]) }}"
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest }}"
+  register: _managed_file_destinations_final
+  tags: [volumes, setup]
+
+- name: Fail when managed file destinations are directories for {{ _app_name }}
+  ansible.builtin.fail:
+    msg: >-
+      Managed file destination {{ managed_file_stat.file_item.dest }} is a directory on the target host.
+  loop: "{{ _managed_file_destinations_final.results | default([]) }}"
+  loop_control:
+    loop_var: managed_file_stat
+    label: "{{ managed_file_stat.file_item.dest }}"
+  when: managed_file_stat.stat.isdir | default(false)
+  tags: [volumes, setup]
+
 - name: Deploy managed files for {{ _app_name }}
   ansible.builtin.copy:
     content: "{{ file_item.content }}"
