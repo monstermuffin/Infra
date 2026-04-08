@@ -1,4 +1,11 @@
 ---
+- name: Ensure Podman is available
+  ansible.builtin.include_tasks: ensure_podman.yml
+  tags:
+    - deploy
+    - install
+    - podman
+
 - name: Deploy enabled apps
   ansible.builtin.include_tasks: deploy_app.yml
   vars:

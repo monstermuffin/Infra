@@ -1,0 +1,44 @@
+---
+- name: Probe Podman availability
+  ansible.builtin.command:
+    cmd: podman --version
+  register: _podman_probe
+  changed_when: false
+  failed_when: false
+
+- name: Track whether Podman is missing
+  ansible.builtin.set_fact:
+    _podman_missing_binary: >-
+      {{
+        _podman_probe.rc | default(1) != 0
+        and ((_podman_probe.msg | default('')) is search('No such file or directory'))
+      }}
+
+- name: Install Podman on demand when the binary is missing
+  ansible.builtin.include_role:
+    name: podman
+    apply:
+      tags:
+        - deploy
+        - install
+        - podman
+  when: _podman_missing_binary
+
+- name: Re-probe Podman after on-demand install
+  ansible.builtin.command:
+    cmd: podman --version
+  register: _podman_probe_after
+  changed_when: false
+  when: _podman_missing_binary
+
+- name: Select Podman probe result
+  ansible.builtin.set_fact:
+    _podman_probe_result: "{{ _podman_probe_after if _podman_missing_binary else _podman_probe }}"
+
+- name: Ensure Podman is available before app deployment
+  ansible.builtin.assert:
+    that:
+      - _podman_probe_result.rc == 0
+    fail_msg: >-
+      Podman is required by apps/podman_app but is unavailable.
+      Probe output: {{ _podman_probe_result.msg | default(_podman_probe_result.stderr | default('unknown error')) }}
