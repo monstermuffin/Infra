@@ -44,7 +44,6 @@ podman_apps:
       PORT: "80"
       BASE_URL: https://comments.muffn.io
       SECRETS_FILE: /etc/comentario/secrets.yaml
-      SUPERUSER: ec26d81b-1c72-4f7a-845c-7b23c89b1970
       LOG_FULL_IPS: "true"
       HOME_CONTENT_URL: https://docs.comentario.app/en/embed/front-page/
 
