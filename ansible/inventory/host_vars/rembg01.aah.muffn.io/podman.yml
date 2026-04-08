@@ -1,6 +1,4 @@
 ---
-proxmox_node: pve03.aah.muffn.io
-
 podman_enabled: true
 
 podman_apps:
@@ -15,6 +13,6 @@ podman_apps:
     volumes:
       - /opt/rembg/models:/root/.u2net
     env:
-      MODEL: u2net
+      MODEL: birefnet-general-lite
       OMP_NUM_THREADS: "4"
       TZ: Europe/London
