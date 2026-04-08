@@ -6,15 +6,11 @@
   changed_when: false
   failed_when: false
 
-- name: Track whether Podman is missing
+- name: Track whether Podman probe failed
   ansible.builtin.set_fact:
-    _podman_missing_binary: >-
-      {{
-        _podman_probe.rc | default(1) != 0
-        and ((_podman_probe.msg | default('')) is search('No such file or directory'))
-      }}
+    _podman_probe_failed: "{{ _podman_probe.rc | default(1) != 0 }}"
 
-- name: Install Podman on demand when the binary is missing
+- name: Ensure Podman role has run when the probe fails
   ansible.builtin.include_role:
     name: podman
     apply:
@@ -22,18 +18,18 @@
         - deploy
         - install
         - podman
-  when: _podman_missing_binary
+  when: _podman_probe_failed
 
 - name: Re-probe Podman after on-demand install
   ansible.builtin.command:
     cmd: podman --version
   register: _podman_probe_after
   changed_when: false
-  when: _podman_missing_binary
+  when: _podman_probe_failed
 
 - name: Select Podman probe result
   ansible.builtin.set_fact:
-    _podman_probe_result: "{{ _podman_probe_after if _podman_missing_binary else _podman_probe }}"
+    _podman_probe_result: "{{ _podman_probe_after if _podman_probe_failed else _podman_probe }}"
 
 - name: Ensure Podman is available before app deployment
   ansible.builtin.assert:
