@@ -39,7 +39,9 @@
     _lxc_features: >-
       nesting={{ '1' if _lxc.features.nesting | default(true) else '0'
       }}{{- ',keyctl=1' if _lxc.features.keyctl | default(false) else ''
-      }}{{- ',fuse=1' if _lxc.features.fuse | default(false) else '' }}
+      }}{{- ',fuse=1' if _lxc.features.fuse | default(false) else ''
+      }}{{- ',mount=' ~ (_lxc.features.mounts | join(','))
+          if (_lxc.features.mounts | default([]) | length > 0) else '' }}
 
 - name: "Build effective DNS settings — {{ _lxc_name }}"
   ansible.builtin.set_fact:

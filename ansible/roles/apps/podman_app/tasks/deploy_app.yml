@@ -57,7 +57,7 @@
 - name: Reload systemd daemon for {{ _app_name }} # noqa: no-handler
   ansible.builtin.systemd:
     daemon_reload: true
-  when: _quadlet_result.changed
+  when: _quadlet_result.changed or _setup_changed
 
 # Stop explicitly before starting when changes require a restart, using `state: restarted`
 # causes Netavark to accumulate stale nftables DNAT rules (bug?)
