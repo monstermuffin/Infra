@@ -1,64 +1,92 @@
 ---
-- name: Set flag to compose routes from specs and bindings
+- name: Determine ingress route input mode
   ansible.builtin.set_fact:
-    _ingress_compose_routes: true
-  when:
-    - ingress_routes | length == 0
-    - ingress_route_specs | length > 0
+    _ingress_route_input_mode: >-
+      {%- if ingress_routes is mapping and ingress_routes | length > 0 -%}
+      keyed
+      {%- elif ingress_routes is sequence and ingress_routes is not string and ingress_routes | length > 0 -%}
+      list
+      {%- else -%}
+      none
+      {%- endif -%}
   tags:
     - always
 
-- name: Validate split ingress route inputs
+- name: Cache keyed ingress route definitions
+  ansible.builtin.set_fact:
+    _ingress_route_defs: "{{ ingress_routes }}"
+  when: _ingress_route_input_mode == 'keyed'
+  tags:
+    - always
+
+- name: Initialize composed ingress routes
+  ansible.builtin.set_fact:
+    ingress_routes: []
+  when: _ingress_route_input_mode == 'keyed'
+  tags:
+    - always
+
+- name: Validate keyed ingress route inputs
   ansible.builtin.assert:
     that:
-      - ingress_route_bindings[route_spec.key] is defined
-      - ingress_route_bindings[route_spec.key].hostname is defined
-      - ingress_route_bindings[route_spec.key].hostname | length > 0
-      - ingress_route_bindings[route_spec.key].upstream_host is defined
-      - ingress_route_bindings[route_spec.key].upstream_host | length > 0
-      - route_spec.value.service_port is defined
-    fail_msg: "Each ingress_route_specs entry requires a matching binding with hostname and upstream_host plus a service_port."
-  loop: "{{ ingress_route_specs | dict2items }}"
+      - route_def.value.hostname is defined
+      - route_def.value.hostname | length > 0
+      - >
+        (
+          route_def.value.service_url is defined
+          and route_def.value.service_url | length > 0
+        )
+        or
+        (
+          route_def.value.upstream_host is defined
+          and route_def.value.upstream_host | length > 0
+          and route_def.value.service_port is defined
+        )
+    fail_msg: "Each keyed ingress_routes entry requires hostname and either service_url or upstream_host plus service_port."
+  loop: "{{ _ingress_route_defs | dict2items }}"
   loop_control:
-    loop_var: route_spec
-    label: "{{ route_spec.key }}"
-  when: _ingress_compose_routes | default(false)
+    loop_var: route_def
+    label: "{{ route_def.key }}"
+  when: _ingress_route_input_mode == 'keyed'
   tags:
     - always
 
-- name: Compose ingress routes from specs and bindings
+- name: Compose ingress routes from keyed definitions
   ansible.builtin.set_fact:
-    ingress_routes: "{{ (ingress_routes | default([])) + [route_data] }}"
+    ingress_routes: "{{ ingress_routes + [route_data] }}"
   vars:
-    route_binding: "{{ ingress_route_bindings[route_spec.key] }}"
     route_data: >-
       {{
         {
-          'name': route_spec.key,
-          'hostname': route_binding.hostname,
+          'name': route_def.key,
+          'hostname': route_def.value.hostname,
           'service_url': (
-            (route_spec.value.service_scheme | default(ingress_route_service_scheme_default))
-            ~ '://'
-            ~ route_binding.upstream_host
-            ~ ':'
-            ~ (route_spec.value.service_port | string)
+            route_def.value.service_url
+            if route_def.value.service_url is defined
+            else (
+              (route_def.value.service_scheme | default(ingress_route_service_scheme_default))
+              ~ '://'
+              ~ route_def.value.upstream_host
+              ~ ':'
+              ~ (route_def.value.service_port | string)
+            )
           ),
-          'oidc_enabled': route_spec.value.oidc_enabled | default(false)
+          'oidc_enabled': route_def.value.oidc_enabled | default(false)
         }
         | combine(
-            (route_spec.value.service_insecure_skip_verify is defined)
-            | ternary({'service_insecure_skip_verify': route_spec.value.service_insecure_skip_verify}, {})
+            (route_def.value.service_insecure_skip_verify is defined)
+            | ternary({'service_insecure_skip_verify': route_def.value.service_insecure_skip_verify}, {})
           )
         | combine(
-            (route_spec.value.exempt_paths is defined)
-            | ternary({'exempt_paths': route_spec.value.exempt_paths}, {})
+            (route_def.value.exempt_paths is defined)
+            | ternary({'exempt_paths': route_def.value.exempt_paths}, {})
           )
       }}
-  loop: "{{ ingress_route_specs | dict2items }}"
+  loop: "{{ _ingress_route_defs | dict2items }}"
   loop_control:
-    loop_var: route_spec
-    label: "{{ route_spec.key }}"
-  when: _ingress_compose_routes | default(false)
+    loop_var: route_def
+    label: "{{ route_def.key }}"
+  when: _ingress_route_input_mode == 'keyed'
   tags:
     - always
 

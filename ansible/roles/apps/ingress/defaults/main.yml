@@ -10,9 +10,8 @@ ingress_traefik_static_config: "{{ ingress_traefik_config_dir }}/traefik.yml"
 ingress_traefik_dynamic_config: "{{ ingress_traefik_dynamic_dir }}/routes.yml"
 ingress_traefik_access_log_path_host: "{{ ingress_traefik_log_dir }}/access.log"
 
+# Accepts either the final route list or a keyed route-definition map.
 ingress_routes: []
-ingress_route_specs: {}
-ingress_route_bindings: {}
 ingress_route_service_scheme_default: http
 
 ingress_entrypoint_name: websecure
