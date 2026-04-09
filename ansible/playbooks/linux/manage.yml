@@ -26,7 +26,14 @@
 
     - name: Wait for cloud-init to finish
       ansible.builtin.command: cloud-init status --wait
+      register: linux_manage_cloud_init_status
       changed_when: false
+      failed_when: >-
+        linux_manage_cloud_init_status.rc not in [0, 2]
+        or (
+          linux_manage_cloud_init_status.rc == 2
+          and 'status: done' not in (linux_manage_cloud_init_status.stdout | default(''))
+        )
       when:
         - linux_manage_is_qemu_guest | bool
         - linux_manage_cloud_init_binary.stat.exists
