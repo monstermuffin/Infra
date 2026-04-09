@@ -1,6 +1,6 @@
 ---
-# Dynamic inventory: AAH cluster fallback (pve04)
-# Only used when pve03 (lxc.aah_cluster.proxmox.yml) is unreachable.
+# Dynamic inventory: AAH cluster guests fallback (pve04)
+# Only used when pve03 (guest.aah_cluster.proxmox.yml) is unreachable.
 
 plugin: community.proxmox.proxmox
 url: https://10.82.2.154:8006
@@ -16,18 +16,21 @@ validate_certs: false
 
 want_proxmox_nodes_ansible_host: false
 want_facts: true
-type: lxc
 
 compose:
   ansible_host: >-
-    (proxmox_lxc_interfaces | default([])
-     | selectattr('name', 'ne', 'lo')
-     | selectattr('inet', 'defined')
-     | map(attribute='inet')
-     | first | default('')
-     | regex_replace('/.*', ''))
-    if (proxmox_net0.ip | default('dhcp')) == 'dhcp'
-    else (proxmox_net0.ip | regex_replace('/.*', ''))
+    (proxmox_ipconfig0.ip | default('') | regex_replace('/.*', ''))
+    if (proxmox_vmtype | default('')) == 'qemu'
+    else (
+      (proxmox_lxc_interfaces | default([])
+       | selectattr('name', 'ne', 'lo')
+       | selectattr('inet', 'defined')
+       | map(attribute='inet')
+       | first | default('')
+       | regex_replace('/.*', ''))
+      if (proxmox_net0.ip | default('dhcp')) == 'dhcp'
+      else (proxmox_net0.ip | default('') | regex_replace('/.*', ''))
+    )
   ansible_user: root
 
 keyed_groups:
