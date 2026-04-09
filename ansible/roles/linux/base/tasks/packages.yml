@@ -1,7 +1,17 @@
 ---
 - name: Install base packages
   ansible.builtin.package:
-    name: "{{ linux_base_packages + linux_base_extra_packages }}"
+    name: >-
+      {{
+        (
+          linux_base_packages
+          + linux_base_extra_packages
+          + (
+            linux_base_manage_qemu_guest_agent | bool
+            | ternary([linux_base_qemu_guest_agent_package], [])
+          )
+        ) | unique
+      }}
     state: present
 
 - name: Check if iGPU device is present

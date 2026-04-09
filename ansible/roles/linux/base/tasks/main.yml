@@ -49,6 +49,13 @@
     - packages
     - setup
 
+- name: Configure qemu guest agent
+  ansible.builtin.import_tasks: qemu_guest_agent.yml
+  when: linux_base_manage_qemu_guest_agent | bool
+  tags:
+    - packages
+    - setup
+
 - name: Configure users
   ansible.builtin.import_tasks: users.yml
   tags:

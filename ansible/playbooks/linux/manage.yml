@@ -6,10 +6,30 @@
 
 - name: Manage Linux guests
   hosts: "{{ target | default('linux_guests:&proxmox_all_running') }}"
-  gather_facts: true
+  gather_facts: false
   vars:
     ansible_user: "{{ linux_manage_user | default('ansible') }}"
+    linux_manage_is_qemu_guest: "{{ proxmox_vmtype | default('') == 'qemu' }}"
+    linux_base_manage_qemu_guest_agent: "{{ linux_manage_is_qemu_guest }}"
   become: true
+
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        sleep: 5
+        timeout: "{{ linux_manage_wait_for_connection_timeout | default(300) }}"
+
+    - name: Check if cloud-init is installed
+      ansible.builtin.stat:
+        path: /usr/bin/cloud-init
+      register: linux_manage_cloud_init_binary
+
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      when:
+        - linux_manage_is_qemu_guest | bool
+        - linux_manage_cloud_init_binary.stat.exists
 
   roles:
     - linux/base

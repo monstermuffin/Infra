@@ -24,6 +24,9 @@ linux_base_packages:
 linux_base_extra_packages: []
 linux_base_igpu_packages:
   - vainfo
+linux_base_manage_qemu_guest_agent: false
+linux_base_qemu_guest_agent_package: qemu-guest-agent
+linux_base_qemu_guest_agent_service: qemu-guest-agent
 
 linux_base_manage_root_authorized_keys: true
 linux_base_root_authorized_keys: "{{ root_authorized_keys | default('', true) }}"

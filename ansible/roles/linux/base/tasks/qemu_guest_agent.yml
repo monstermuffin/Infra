@@ -1,0 +1,11 @@
+---
+- name: Check for qemu guest agent device
+  ansible.builtin.stat:
+    path: /dev/virtio-ports/org.qemu.guest_agent.0
+  register: linux_base_qemu_guest_agent_device
+
+- name: Start qemu guest agent
+  ansible.builtin.systemd_service:
+    name: "{{ linux_base_qemu_guest_agent_service }}"
+    state: started
+  when: linux_base_qemu_guest_agent_device.stat.exists
