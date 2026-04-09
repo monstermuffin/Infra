@@ -7,6 +7,111 @@ variable "cloudflare_account_id" {
   type = string
 }
 
+variable "proxmox_virtual_environment_endpoint" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+}
+
+variable "proxmox_virtual_environment_username" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "proxmox_virtual_environment_password" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+}
+
+variable "proxmox_virtual_environment_api_token" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+}
+
+variable "proxmox_virtual_environment_insecure" {
+  type    = bool
+  default = true
+}
+
+variable "proxmox_virtual_environment_ssh_username" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "proxmox_virtual_environment_ssh_password" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+}
+
+variable "proxmox_virtual_environment_ssh_private_key" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+}
+
+variable "proxmox_virtual_environment_ssh_agent" {
+  type    = bool
+  default = false
+}
+
+variable "proxmox_vm_default_user" {
+  type    = string
+  default = "ansible"
+}
+
+variable "proxmox_vm_default_admin_user" {
+  type    = string
+  default = "muffin"
+}
+
+variable "proxmox_vm_default_authorized_keys" {
+  type    = list(string)
+  default = []
+}
+
+variable "proxmox_vm_default_dns_servers" {
+  type    = list(string)
+  default = []
+}
+
+variable "proxmox_vm_default_dns_search_domain" {
+  type    = string
+  default = ""
+}
+
+variable "proxmox_vm_default_snippets_datastore_id" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "proxmox_vm_default_image" {
+  type = object({
+    url          = string
+    file_name    = string
+    datastore_id = string
+    overwrite    = optional(bool, false)
+    verify       = optional(bool, true)
+  })
+  default = {
+    url          = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
+    file_name    = "debian-13-generic-amd64.qcow2"
+    datastore_id = "local"
+    overwrite    = false
+    verify       = true
+  }
+}
+
 variable "technitium_aah_server_url" {
   type    = string
   default = "https://10.82.7.102"

@@ -55,7 +55,18 @@ locals {
     } if r.zone == technitium_zone.aah.name
   }
 
-  aah_host_records = merge(local.aah_infra_records, local.aah_lxc_records)
+  aah_vm_records = {
+    for fqdn, record in local.proxmox_vm_dns_records : fqdn => {
+      ip  = record.ip
+      ttl = 300
+    } if record.zone == technitium_zone.aah.name
+  }
+
+  aah_host_records = merge(
+    local.aah_infra_records,
+    local.aah_lxc_records,
+    local.aah_vm_records,
+  )
 
   aah_reverse_records = {
     for fqdn, record in local.aah_host_records : fqdn => {
@@ -95,6 +106,19 @@ resource "technitium_record" "aah_infra" {
 
 resource "technitium_record" "aah_lxc_hosts" {
   for_each = local.aah_lxc_records
+  provider = technitium.aah
+
+  zone  = technitium_zone.aah.name
+  name  = each.key
+  type  = "A"
+  value = each.value.ip
+  ttl   = each.value.ttl
+
+  depends_on = [technitium_zone.aah]
+}
+
+resource "technitium_record" "aah_vm_hosts" {
+  for_each = local.aah_vm_records
   provider = technitium.aah
 
   zone  = technitium_zone.aah.name

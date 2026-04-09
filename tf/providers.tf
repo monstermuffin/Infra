@@ -12,6 +12,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5"
     }
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = "~> 0.100"
+    }
     technitium = {
       source  = "darkhonor/technitium"
       version = "~> 1.1"
@@ -22,6 +26,38 @@ terraform {
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
+}
+
+provider "proxmox" {
+  endpoint  = var.proxmox_virtual_environment_endpoint
+  username  = var.proxmox_virtual_environment_username
+  password  = var.proxmox_virtual_environment_password
+  api_token = var.proxmox_virtual_environment_api_token
+  insecure  = var.proxmox_virtual_environment_insecure
+
+  dynamic "ssh" {
+    for_each = (
+      var.proxmox_virtual_environment_ssh_agent ||
+      var.proxmox_virtual_environment_ssh_password != null ||
+      var.proxmox_virtual_environment_ssh_private_key != null ||
+      var.proxmox_virtual_environment_password != null
+    ) ? [1] : []
+
+    content {
+      agent       = var.proxmox_virtual_environment_ssh_agent
+      password    = coalesce(var.proxmox_virtual_environment_ssh_password, var.proxmox_virtual_environment_password)
+      private_key = var.proxmox_virtual_environment_ssh_private_key
+      username    = coalesce(var.proxmox_virtual_environment_ssh_username, var.proxmox_virtual_environment_username)
+
+      dynamic "node" {
+        for_each = local.proxmox_provider_ssh_nodes
+        content {
+          address = node.value.address
+          name    = node.value.name
+        }
+      }
+    }
+  }
 }
 
 provider "technitium" {
