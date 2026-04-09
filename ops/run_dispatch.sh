@@ -38,9 +38,42 @@ run_ansible() {
 }
 
 run_terraform() {
+  local tfvars_file
+  tfvars_file=$(python3 ops/proxmox_vm_dispatch.py resolve-tfvars --base "${LAST_SUCCESSFUL_SHA:-}" --head "$SHA")
   python3 ops/gen_lxc_dns.py
   terraform -chdir=tf init -input=false
-  terraform -chdir=tf apply -auto-approve -var-file=terraform.tfvars
+  if [ -n "$tfvars_file" ]; then
+    terraform -chdir=tf apply -parallelism=1 -auto-approve -var-file="$tfvars_file"
+  else
+    terraform -chdir=tf apply -parallelism=1 -auto-approve
+  fi
+}
+
+changed_vm_hosts() {
+  if [ -n "$LAST_SUCCESSFUL_SHA" ] && git cat-file -e "${LAST_SUCCESSFUL_SHA}^{commit}" 2>/dev/null; then
+    python3 ops/proxmox_vm_dispatch.py changed-names --base "$LAST_SUCCESSFUL_SHA" --head "$SHA"
+  else
+    python3 ops/proxmox_vm_dispatch.py changed-names --head "$SHA"
+  fi
+}
+
+run_vm_bootstrap() {
+  local vm_limit
+  vm_limit=$(changed_vm_hosts)
+
+  if [ -z "$vm_limit" ]; then
+    echo "No Terraform-managed VM definitions changed; skipping VM bootstrap"
+    return 0
+  fi
+
+  echo "Bootstrapping Terraform-managed VMs: $vm_limit"
+  (
+    cd ansible
+    mkdir -p /tmp/ansible-cp
+    ANSIBLE_LOCAL_TEMP=/tmp \
+    ANSIBLE_SSH_CONTROL_PATH_DIR=/tmp/ansible-cp \
+    ansible-playbook playbooks/linux/manage.yml -e target="$vm_limit" --limit "$vm_limit"
+  )
 }
 
 overall_status=0
@@ -50,6 +83,10 @@ if ! run_ansible; then
 fi
 
 if ! run_terraform; then
+  overall_status=1
+fi
+
+if [ "$overall_status" -eq 0 ] && ! run_vm_bootstrap; then
   overall_status=1
 fi
 

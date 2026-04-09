@@ -1,0 +1,23 @@
+---
+control_planes:
+  - id: aah-cluster01
+    tfvars_file: terraform.aah-cluster01.tfvars
+    nodes:
+      - pve03
+      - pve04
+    hostname_suffixes:
+      - .aah.muffn.io
+
+  - id: pve02-aah
+    tfvars_file: terraform.pve02-aah.tfvars
+    nodes:
+      - pve02
+    hostname_suffixes:
+      - .aah.muffn.io
+
+  - id: pve01-lcy
+    tfvars_file: terraform.pve01-lcy.tfvars
+    nodes:
+      - pve01
+    hostname_suffixes:
+      - .lcy.muffn.io
