@@ -53,3 +53,20 @@ provider "registry.terraform.io/darkhonor/technitium" {
     "zh:97d3c059d8a44d7525232f1471b49f638ea071a85955d82630d1c7682a58dab2",
   ]
 }
+
+provider "registry.terraform.io/kenske/technitium" {
+  version     = "0.2.2"
+  constraints = "~> 0.2.2"
+  hashes = [
+    "h1:q4uTUDIKsxglija7JHiEJSNhZxapexQiDWkV+bYGUVk=",
+    "zh:04ffa024db1c24398cb1760f8ca17acf9e7b6955c39dc61f9382595f7168e87a",
+    "zh:108433862a86cfe9c6b2f5e5ae245c6c357f11007330cfc91c34838b2933eee7",
+    "zh:12077ca979169e9981057e6c1c89f8fd502f4835df1349775918030876e5d813",
+    "zh:20f33592a0d2159c6b331c110ded473b064b06cccd97266b81320ae47801820b",
+    "zh:2fde9ec6d886dd390fa2c0618325f5904500eb9ee872d7c8b26f84b1a7abf8db",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:894a353ff5b11a52b3a760f2cd5cb237d6b03ec4df61cb0aadf15aa52994c680",
+    "zh:ba2a73b31804051248b3e7d8e757057844c3532dc28b3cd40c984c685afd9d63",
+    "zh:e14a63fa746ddebc3320c64c976b1c1cbd69b90d598a96e25a904b36c59cc638",
+  ]
+}

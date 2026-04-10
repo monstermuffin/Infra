@@ -45,3 +45,9 @@ jobs:
         run: |
           . $GITHUB_WORKSPACE/.venv/bin/activate
           python ops/lxc_inventory.py --check-duplicates
+
+      - name: Terraform init
+        run: terraform -chdir=tf init -backend=false -input=false -lockfile=readonly
+
+      - name: Terraform validate
+        run: terraform -chdir=tf validate

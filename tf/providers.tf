@@ -20,6 +20,10 @@ terraform {
       source  = "darkhonor/technitium"
       version = "~> 1.1"
     }
+    kenske-technitium = {
+      source  = "kenske/technitium"
+      version = "~> 0.2.2"
+    }
   }
 
 }
@@ -71,4 +75,16 @@ provider "technitium" {
   server_url      = var.technitium_lcy_server_url
   api_token       = var.technitium_lcy_api_token
   skip_tls_verify = true
+}
+
+provider "kenske-technitium" {
+  alias = "aah"
+  host  = format("%s:5380", trimsuffix(replace(var.technitium_aah_server_url, "https://", "http://"), "/"))
+  token = var.technitium_aah_api_token
+}
+
+provider "kenske-technitium" {
+  alias = "lcy"
+  host  = format("%s:5380", trimsuffix(replace(var.technitium_lcy_server_url, "https://", "http://"), "/"))
+  token = var.technitium_lcy_api_token
 }
