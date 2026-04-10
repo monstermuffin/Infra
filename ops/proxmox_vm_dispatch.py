@@ -51,8 +51,40 @@ def _git_changed_vm_files(base: str | None, head: str) -> list[Path]:
     return sorted(VM_ROOT.rglob("*.vm.yml"))
 
 
+def _git_changed_vm_statuses(base: str, head: str) -> list[tuple[str, Path]]:
+    result = subprocess.run(
+        ["git", "diff", "--name-status", "--find-renames", base, head, "--", "tf/proxmox_vms"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    changes: list[tuple[str, Path]] = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        status = parts[0]
+        path_text = parts[-1]
+        changes.append((status, REPO_ROOT / path_text))
+    return changes
+
+
 def _load_vm_doc(path: Path) -> dict:
     return yaml.safe_load(path.read_text()) or {}
+
+
+def _load_vm_doc_at_ref(ref: str, path: Path) -> dict:
+    rel_path = str(path.relative_to(REPO_ROOT))
+    result = subprocess.run(
+        ["git", "show", f"{ref}:{rel_path}"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return yaml.safe_load(result.stdout) or {}
 
 
 def _vm_name(path: Path, doc: dict) -> str:
@@ -93,6 +125,23 @@ def _changed_vm_info(base: str | None, head: str) -> list[tuple[Path, dict, Cont
     return info
 
 
+def _changed_vm_control_planes(base: str | None, head: str) -> set[str]:
+    if not base:
+        return _all_vm_control_planes()
+
+    control_planes = _load_control_planes()
+    plane_ids = set()
+    for status, path in _git_changed_vm_statuses(base, head):
+        if status.startswith("D"):
+            doc = _load_vm_doc_at_ref(base, path)
+        else:
+            if not path.is_file():
+                continue
+            doc = _load_vm_doc(path)
+        plane_ids.add(_match_control_plane(path, doc, control_planes).id)
+    return plane_ids
+
+
 def _all_vm_control_planes() -> set[str]:
     control_planes = _load_control_planes()
     plane_ids = set()
@@ -109,22 +158,18 @@ def command_changed_names(args: argparse.Namespace) -> int:
 
 
 def command_resolve_tfvars(args: argparse.Namespace) -> int:
-    all_plane_ids = _all_vm_control_planes()
-    if len(all_plane_ids) > 1:
-        raise SystemExit(
-            "Terraform VM automation currently supports one control plane per run. "
-            f"The repository currently contains VM definitions for multiple planes: {sorted(all_plane_ids)}."
-        )
-
-    changed_info = _changed_vm_info(args.base, args.head)
-    if changed_info:
-        plane_ids = {plane.id for _, _, plane in changed_info}
-        plane_map = {plane.id: plane for _, _, plane in changed_info}
+    changed_plane_ids = _changed_vm_control_planes(args.base, args.head)
+    if changed_plane_ids:
+        plane_ids = changed_plane_ids
         source = "changed VM definitions"
     else:
+        all_plane_ids = _all_vm_control_planes()
+        if len(all_plane_ids) > 1:
+            raise SystemExit(
+                "Terraform VM automation currently supports one control plane per run. "
+                f"The repository currently contains VM definitions for multiple planes: {sorted(all_plane_ids)}."
+            )
         plane_ids = all_plane_ids
-        all_planes = _load_control_planes()
-        plane_map = {plane.id: plane for plane in all_planes if plane.id in plane_ids}
         source = "all VM definitions"
 
     if not plane_ids:
@@ -137,6 +182,8 @@ def command_resolve_tfvars(args: argparse.Namespace) -> int:
             f"Found {sorted(plane_ids)} from {source}."
         )
 
+    all_planes = _load_control_planes()
+    plane_map = {plane.id: plane for plane in all_planes}
     selected_plane = plane_map[next(iter(plane_ids))]
     print(selected_plane.tfvars_file)
     return 0
