@@ -1,9 +1,20 @@
 #!/bin/bash
-set -uo pipefail
+set -euo pipefail
+
+require_env() {
+  local name=$1
+  if [ -z "${!name:-}" ]; then
+    echo "Required environment variable '$name' is not set" >&2
+    exit 1
+  fi
+}
 
 # Unlock git-crypt and write vault password file
-echo "$GIT_CRYPT_KEY" | base64 -d | git-crypt unlock -
-echo "$VAULT_PASSWORD" > /tmp/.vault_password
+require_env GIT_CRYPT_KEY
+require_env VAULT_PASSWORD
+
+printf '%s' "$GIT_CRYPT_KEY" | base64 -d | git-crypt unlock -
+printf '%s\n' "$VAULT_PASSWORD" > /tmp/.vault_password
 chmod 600 /tmp/.vault_password
 
 SHA=$(git rev-parse HEAD)
