@@ -149,5 +149,10 @@ resource "technitium_record" "aah_ptr" {
   value = each.key
   ttl   = each.value.ttl
 
-  depends_on = [technitium_zone.aah_reverse]
+  depends_on = [
+    technitium_zone.aah_reverse,
+    technitium_record.aah_infra,
+    technitium_record.aah_lxc_hosts,
+    technitium_record.aah_vm_hosts,
+  ]
 }
