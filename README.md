@@ -13,6 +13,9 @@ Example files will be provided with example data for reference.
 
 ## TODO
 
-- [ ] Understand Claude's solution to lxc selection.
+- [X] Understand Claude's solution to lxc selection.
+- [ ] Deploy tf config for full VM deployment and management.
+- [ ] Find / Write a tf provider that has full functionality for Proxmox LXC containers.
+- [ ] Tweak Removate config to ensure automerge is doing its thing correctly.
 - [ ] Fix/Understand why `netavark` is accumulating stale nftables DNAT rules when `state: restarted` is used, or any kind of redeploy happens.
   - Current 'workaround' is rebooting the LXC.
