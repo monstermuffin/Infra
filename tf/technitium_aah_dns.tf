@@ -116,6 +116,12 @@ resource "technitium_dns_zone_record" "aah_ptr" {
   ptr_name = each.key
   ttl      = each.value.ttl
 
+  lifecycle {
+    # kenske/technitium does not round-trip PTR target data in Read, so
+    # legacy malformed PTRs can fail non-essential TTL-only updates.
+    ignore_changes = [ttl]
+  }
+
   depends_on = [
     technitium_dns_zone.aah_reverse,
     technitium_dns_zone_record.aah_infra,
