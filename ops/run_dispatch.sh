@@ -14,6 +14,41 @@ require_env GIT_CRYPT_KEY
 require_env VAULT_PASSWORD
 
 printf '%s' "$GIT_CRYPT_KEY" | base64 -d | git-crypt unlock -
+
+python3 - <<'PY'
+from pathlib import Path
+import subprocess
+import sys
+
+files = subprocess.run(
+    ["git", "ls-files", "-z"],
+    check=True,
+    capture_output=True,
+).stdout.decode().split("\0")
+
+bad = []
+for rel in files:
+    if not rel:
+        continue
+    attr = subprocess.run(
+        ["git", "check-attr", "filter", "--", rel],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    if "filter: git-crypt" not in attr:
+        continue
+    path = Path(rel)
+    if path.is_file() and path.read_bytes().startswith(b"\x00GITCRYPT\x00"):
+        bad.append(rel)
+
+if bad:
+    print("git-crypt unlock did not decrypt these files:", file=sys.stderr)
+    for rel in bad:
+        print(f"  {rel}", file=sys.stderr)
+    sys.exit(1)
+PY
+
 printf '%s\n' "$VAULT_PASSWORD" > /tmp/.vault_password
 chmod 600 /tmp/.vault_password
 
