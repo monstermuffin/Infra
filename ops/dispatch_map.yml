@@ -151,6 +151,12 @@ rules:
     playbook: "ansible/playbooks/app/ingress.yml"
     limit: "tag_app_cftun_aah"
 
+  # Ingress Ansible role (defaults/plugin pins, templates) Role used for Renovate updates to traefikoidc
+  # limit: all LXCs with Proxmox tag app_ingress [see guest.*.proxmox.yml keyed_groups tag_]
+  - pattern: "ansible/roles/apps/ingress/**"
+    playbook: "ansible/playbooks/app/ingress.yml"
+    limit: "tag_app_ingress"
+
   - pattern: "ansible/inventory/group_vars/tag_podman_app.yml"
     playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
     limit: "tag_podman_app"
