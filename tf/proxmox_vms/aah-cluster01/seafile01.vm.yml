@@ -1,0 +1,42 @@
+hostname: seafile01.aah.muffn.io
+description: >-
+  Seafile VM.
+node_name: pve04
+vm_id: 132
+
+cpu:
+  cores: 4
+
+memory:
+  dedicated: 4096
+  floating: 4096
+
+network:
+  ipv4_address: 10.82.7.132/24
+  ipv4_gateway: 10.82.7.1
+  vlan_id: 707
+
+disks:
+  - interface: scsi0
+    datastore_id: local-zfs
+    size_gb: 32
+
+agent:
+  enabled: true
+
+tags:
+  - app_seafile
+  - os_trixie
+  - site_aah
+  - vm_app
+
+ha:
+  enabled: true
+  state: started
+  max_restart: 1
+  max_relocate: 1
+
+replication:
+  enabled: true
+  target: pve04
+  schedule: "*/15"
