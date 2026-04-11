@@ -6,9 +6,6 @@ on:
     paths-ignore:
       - "**/*.example.*"
       - "**/*.example"
-  push:
-    branches:
-      - "renovate/**"
 
 jobs:
   lint:
@@ -48,6 +45,9 @@ jobs:
         run: |
           . $GITHUB_WORKSPACE/.venv/bin/activate
           python ops/lxc_inventory.py --check-duplicates
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
       - name: Terraform init
         run: terraform -chdir=tf init -backend=false -input=false -lockfile=readonly
