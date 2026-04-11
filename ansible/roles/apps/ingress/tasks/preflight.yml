@@ -1,14 +1,21 @@
 ---
-- name: Determine ingress route input mode
+- name: Set ingress route input mode default
   ansible.builtin.set_fact:
-    _ingress_route_input_mode: >-
-      {%- if ingress_routes is mapping and ingress_routes | length > 0 -%}
-      keyed
-      {%- elif ingress_routes is sequence and ingress_routes is not string and ingress_routes | length > 0 -%}
-      list
-      {%- else -%}
-      none
-      {%- endif -%}
+    _ingress_route_input_mode: "none"
+  tags:
+    - always
+
+- name: Set ingress route input mode to list
+  ansible.builtin.set_fact:
+    _ingress_route_input_mode: "list"
+  when: ingress_routes is sequence and ingress_routes is not string and ingress_routes | length > 0
+  tags:
+    - always
+
+- name: Set ingress route input mode to keyed
+  ansible.builtin.set_fact:
+    _ingress_route_input_mode: "keyed"
+  when: ingress_routes is mapping and ingress_routes | length > 0
   tags:
     - always
 
