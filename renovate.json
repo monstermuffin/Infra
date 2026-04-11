@@ -5,6 +5,8 @@
   ],
   "minimumReleaseAge": "3 days",
   "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
   "customManagers": [
     {
       "customType": "regex",
