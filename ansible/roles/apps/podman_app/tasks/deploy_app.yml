@@ -89,6 +89,7 @@
   when:
     - _app.service_start | default(true)
     - _quadlet_result.changed or _image_changed or _setup_changed
+    - _app.network_mode is not defined
 
 - name: Wait for service port for {{ _app_name }}
   ansible.builtin.wait_for:
