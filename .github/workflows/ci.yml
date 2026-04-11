@@ -6,6 +6,9 @@ on:
     paths-ignore:
       - "**/*.example.*"
       - "**/*.example"
+  push:
+    branches:
+      - "renovate/**"
 
 jobs:
   lint:
