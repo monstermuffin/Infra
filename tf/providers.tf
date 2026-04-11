@@ -49,7 +49,7 @@ provider "proxmox" {
 
     content {
       agent       = var.proxmox_virtual_environment_ssh_agent
-      password    = coalesce(var.proxmox_virtual_environment_ssh_password, var.proxmox_virtual_environment_password)
+      password    = try(coalesce(var.proxmox_virtual_environment_ssh_password, var.proxmox_virtual_environment_password), null)
       private_key = var.proxmox_virtual_environment_ssh_private_key
       username    = coalesce(var.proxmox_virtual_environment_ssh_username, var.proxmox_virtual_environment_username)
 

@@ -34,7 +34,7 @@ locals {
   proxmox_vm_defaults = {
     agent = {
       enabled       = false
-      timeout       = "15m"
+      timeout       = "3m"
       trim          = false
       wait_for_ipv4 = false
       wait_for_ipv6 = false
@@ -166,7 +166,17 @@ locals {
       agent       = merge(local.proxmox_vm_defaults.agent, try(doc.agent, {}))
       startup     = try(doc.startup, null)
       ha          = merge(local.proxmox_vm_defaults.ha, try(doc.ha, {}))
-      replication = merge(local.proxmox_vm_defaults.replication, try(doc.replication, {}))
+      replication = merge(
+        local.proxmox_vm_defaults.replication,
+        try(doc.replication, {}),
+        {
+          # Auto-derive target from cluster peers
+          target = try(doc.replication.target, null) != null ? doc.replication.target : try(
+            [for n in local.proxmox_cluster_nodes[split("/", rel_path)[1]] : n if n != doc.node_name][0],
+            null
+          )
+        }
+      )
       dns = {
         fqdn = doc.hostname
         ip   = split("/", doc.network.ipv4_address)[0]
@@ -174,6 +184,12 @@ locals {
         zone = length(split(".", doc.hostname)) > 1 ? join(".", slice(split(".", doc.hostname), 1, length(split(".", doc.hostname)))) : ""
       }
     }
+  }
+
+  # Maps cluster group name
+  proxmox_cluster_nodes = {
+    for cluster_name, cluster in try(local.proxmox_inventory_hosts.all.children.proxmox.children, {}) :
+    cluster_name => [for fqdn in keys(try(cluster.hosts, {})) : split(".", fqdn)[0]]
   }
 
   proxmox_vm_download_groups = {
@@ -211,6 +227,8 @@ locals {
       yamlencode({
         disable_root = true
         ssh_pwauth   = false
+        packages     = ["qemu-guest-agent"]
+        runcmd       = ["systemctl enable --now qemu-guest-agent"]
         users = [{
           name                = vm.cloud_init.admin_user
           groups              = ["sudo"]
