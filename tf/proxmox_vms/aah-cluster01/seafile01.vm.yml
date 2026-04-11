@@ -38,5 +38,4 @@ ha:
 
 replication:
   enabled: true
-  target: pve04
   schedule: "*/15"
