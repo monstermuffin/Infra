@@ -229,14 +229,24 @@ locals {
         ssh_pwauth   = false
         packages     = ["qemu-guest-agent"]
         runcmd       = ["systemctl enable --now qemu-guest-agent"]
-        users = [{
-          name                = vm.cloud_init.admin_user
-          groups              = ["sudo"]
-          lock_passwd         = true
-          shell               = "/bin/bash"
-          ssh_authorized_keys = vm.cloud_init.admin_authorized_keys
-          sudo                = "ALL=(ALL) NOPASSWD:ALL"
-        }]
+        users = concat(
+          length(vm.cloud_init.ssh_authorized_keys) > 0 ? [{
+            name                = vm.cloud_init.user
+            groups              = ["sudo"]
+            lock_passwd         = true
+            shell               = "/bin/bash"
+            ssh_authorized_keys = vm.cloud_init.ssh_authorized_keys
+            sudo                = "ALL=(ALL) NOPASSWD:ALL"
+          }] : [],
+          [{
+            name                = vm.cloud_init.admin_user
+            groups              = ["sudo"]
+            lock_passwd         = true
+            shell               = "/bin/bash"
+            ssh_authorized_keys = vm.cloud_init.admin_authorized_keys
+            sudo                = "ALL=(ALL) NOPASSWD:ALL"
+          }]
+        )
       }),
     ])
   }
