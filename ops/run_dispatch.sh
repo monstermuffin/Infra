@@ -103,6 +103,16 @@ changed_vm_hosts() {
   fi
 }
 
+tf_files_changed() {
+  # tf/ changes, or LXC inventory paths that gen_lxc_dns.py reads for DNS records
+  local patterns=(tf/ ansible/inventory/group_vars/*/lxc/ ansible/inventory/host_vars/pve*/lxc/)
+  if [ -n "$LAST_SUCCESSFUL_SHA" ] && git cat-file -e "${LAST_SUCCESSFUL_SHA}^{commit}" 2>/dev/null; then
+    git diff --name-only "$LAST_SUCCESSFUL_SHA" "$SHA" -- "${patterns[@]}"
+  else
+    git diff-tree --no-commit-id -r --name-only "$SHA" -- "${patterns[@]}"
+  fi
+}
+
 run_vm_bootstrap() {
   local vm_limit
   vm_limit=$(changed_vm_hosts)
@@ -128,8 +138,12 @@ if ! run_ansible; then
   overall_status=1
 fi
 
-if ! run_terraform; then
-  overall_status=1
+if [ -n "$(tf_files_changed)" ]; then
+  if ! run_terraform; then
+    overall_status=1
+  fi
+else
+  echo "No tf/ files changed; skipping Terraform"
 fi
 
 if [ "$overall_status" -eq 0 ] && ! run_vm_bootstrap; then
