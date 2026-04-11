@@ -49,6 +49,15 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Stub git-crypt encrypted TF files
+        run: |
+          find tf -maxdepth 2 -name "*.tf" | while IFS= read -r f; do
+            if python3 -c "import sys; data=open(sys.argv[1],'rb').read(10); sys.exit(0 if data.startswith(b'\x00GITCRYPT') else 1)" "$f" 2>/dev/null; then
+              printf '# git-crypt encrypted (stubbed for CI)\n' > "$f"
+              printf 'stubbing git-crypt file: %s\n' "$f"
+            fi
+          done
+
       - name: Terraform init
         run: terraform -chdir=tf init -backend=false -input=false -lockfile=readonly
 
