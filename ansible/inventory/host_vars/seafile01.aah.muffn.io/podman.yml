@@ -1,0 +1,39 @@
+---
+podman_enabled: true
+
+podman_volumes:
+  seafile-data:
+    driver: local
+    options:
+      - "type=nfs"
+      - "o=addr=10.82.7.122,rw,nolock,soft,nfsvers=4"
+      - "device=:/mnt/pool-01/containers/seafile"
+
+podman_apps:
+  seafile:
+    enabled: true
+    image: seafileltd/seafile-pro-mc
+    # renovate: datasource=docker depName=seafileltd/seafile-pro-mc
+    tag: "12.0-latest"
+    port: 8443
+    container_port: 443
+    security_label_disable: true
+    volumes:
+      - seafile-data.volume:/shared
+      - /opt/seafile/db:/var/lib/mysql
+      - /opt/seafile/ssl:/shared/ssl:ro
+    files:
+      - dest: /opt/seafile/ssl/seafile.crt
+        content: "{{ seafile_tls_cert }}"
+        mode: '0644'
+      - dest: /opt/seafile/ssl/seafile.key
+        content: "{{ seafile_tls_key }}"
+        mode: '0600'
+    env:
+      TZ: Europe/London
+      TIME_ZONE: Europe/London
+      SEAFILE_SERVER_HOSTNAME: "{{ seafile_public_hostname | trim }}"
+      DB_ROOT_PASSWD: "{{ seafile_db_root_password | trim }}"
+      SEAFILE_ADMIN_EMAIL: "{{ seafile_admin_email | trim }}"
+      SEAFILE_ADMIN_PASSWORD: "{{ seafile_admin_password | trim }}"
+      SEAFILE_SERVER_LETSENCRYPT: "false"

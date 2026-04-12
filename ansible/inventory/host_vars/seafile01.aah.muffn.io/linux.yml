@@ -1,0 +1,5 @@
+---
+linux_base_hostname: seafile01.aah.muffn.io
+linux_base_manage_qemu_guest_agent: true
+linux_base_extra_packages:
+  - nfs-common

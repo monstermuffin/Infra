@@ -1,0 +1,61 @@
+---
+# Deploy/Maintain Seafile.
+#
+# Full deploy:
+#   ansible-playbook playbooks/vm/deploy_seafile.yml
+#
+# OS setup only:
+#   ansible-playbook playbooks/vm/deploy_seafile.yml --tags base
+#
+# Podman + volumes only (skip OS):
+#   ansible-playbook playbooks/vm/deploy_seafile.yml --tags podman
+#
+# App deploy only (images, Quadlet files, service):
+#   ansible-playbook playbooks/vm/deploy_seafile.yml --tags deploy
+
+- name: Deploy Seafile VM
+  hosts: "{{ target | default('seafile01.aah.muffn.io') }}"
+  become: true
+  gather_facts: false
+  vars:
+    ansible_user: "{{ linux_manage_user | default('ansible') }}"
+
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        sleep: 5
+        timeout: 300
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Check if cloud-init is installed
+      ansible.builtin.stat:
+        path: /usr/bin/cloud-init
+      register: _cloud_init_binary
+
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      failed_when: >-
+        _cloud_init_status.rc not in [0, 2]
+        or (
+          _cloud_init_status.rc == 2
+          and 'status: done' not in (_cloud_init_status.stdout | default(''))
+        )
+      register: _cloud_init_status
+      when: _cloud_init_binary.stat.exists
+
+  roles:
+    - role: linux/base
+      tags:
+        - base
+        - setup
+    - role: podman
+      tags:
+        - podman
+        - install
+    - role: apps/podman_app
+      tags:
+        - app
+        - deploy
