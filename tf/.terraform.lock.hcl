@@ -3,9 +3,11 @@
 
 provider "registry.terraform.io/bpg/proxmox" {
   version     = "0.100.0"
-  constraints = "~> 0.87"
+  constraints = "~> 0.100"
   hashes = [
+    "h1:dhJwVfCw8MhEU7An6dVe5Fmjs37ZFH4gLp12MSiUEn8=",
     "h1:hHh52hDjy8eywxSfqxPb5WejX8p6MUm0JFkM/PetImw=",
+    "h1:ubWt5DGEISEVYd1xWrNBS6BmNHOj5nlUcBqxd0Fo2Dg=",
     "zh:1a00788132ce14f97131c3e606a6bbbb9f656cf3aabd919380dde2e02d7c849d",
     "zh:1a07e0cb29983d5dc7ed77d86816caf567a2b3fd63e900473e15f31107b82780",
     "zh:1b02d824b13a4cc1cc404c29dd904d2ea9019c341461462e790b8e81e3a25345",
@@ -28,6 +30,8 @@ provider "registry.terraform.io/cloudflare/cloudflare" {
   constraints = "~> 5.0"
   hashes = [
     "h1:2FKT5YVLuHLmv7BnFxDC3UtipD3hSSrb0iJ9Ei2C/ks=",
+    "h1:B9eoAx4QKNVuKHDahNl8JzuSLCCeIGAJiS0MckJu5wQ=",
+    "h1:VMUOof+Cf2h4asIe2lin7Fvf15mGWQ9mQYiuGhYM1aw=",
     "zh:47e7bdfd8eddd2685f383269c0b6936ef62edd6d8383c8d7757b0cce0a689737",
     "zh:aa23eb6aa128667883cabc449ceca4072d0181f574cd727e08ebd6d69a4bfd48",
     "zh:c3da673e05d3bd933c82e2b6ba0f85aa23c5e24fadd3932f7c066314feeb65a3",
@@ -44,6 +48,8 @@ provider "registry.terraform.io/darkhonor/technitium" {
   version     = "1.1.0"
   constraints = "~> 1.1"
   hashes = [
+    "h1:+PIjpgfSqFxA3893Jvd8Xs4xiuoiGr/4Lu4QXOZWW2g=",
+    "h1:bNw8JWh4FIVHKrnOYYr5z5/j9qdbdBD7EntX235Pj/Y=",
     "h1:vKybEmym2ky5b4J0VX63+ZCKlpAFtxmlc5/JLvSmfoc=",
     "zh:0855bb0e2a5bd9ec68a6a7cf117980189b2f2030232ef7ae6815c97118eb0908",
     "zh:1cbca86ce5f77e8aa32f863f2f40046a12b32f4d94860f7f0a03d24a6091ffd4",
@@ -58,7 +64,9 @@ provider "registry.terraform.io/kenske/technitium" {
   version     = "0.2.2"
   constraints = "~> 0.2.2"
   hashes = [
+    "h1:pBlFhfiTalu6N/eWtjY7lkF4zX8m494WKYBaeJ0wcMM=",
     "h1:q4uTUDIKsxglija7JHiEJSNhZxapexQiDWkV+bYGUVk=",
+    "h1:rignNmwQC/cNNAgxCqYj/spZAiyiZ/buX4iRAwA9lQI=",
     "zh:04ffa024db1c24398cb1760f8ca17acf9e7b6955c39dc61f9382595f7168e87a",
     "zh:108433862a86cfe9c6b2f5e5ae245c6c357f11007330cfc91c34838b2933eee7",
     "zh:12077ca979169e9981057e6c1c89f8fd502f4835df1349775918030876e5d813",
