@@ -21,6 +21,12 @@ api:
 {% for cidr in crowdsec_lapi_allowed_ranges %}
         - "{{ cidr }}"
 {% endfor %}
+{% if crowdsec_lapi_trusted_ips | length > 0 %}
+    trusted_ips:
+{% for ip in crowdsec_lapi_trusted_ips %}
+      - "{{ ip }}"
+{% endfor %}
+{% endif %}
 
 prometheus:
   enabled: true

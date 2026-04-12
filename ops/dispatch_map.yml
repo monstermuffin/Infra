@@ -151,6 +151,11 @@ rules:
     playbook: "ansible/playbooks/app/ingress.yml"
     limit: "tag_app_cftun_aah"
 
+  # CrowdSec LAPI
+  - pattern: "ansible/roles/apps/baremetal/crowdsec_lapi/**"
+    playbook: "ansible/playbooks/lxc/deploy_crowdsec_lapi.yml"
+    limit: "tag_app_crowdsec"
+
   # Ingress Ansible role (defaults/plugin pins, templates) Role used for Renovate updates to traefikoidc
   # limit: all LXCs with Proxmox tag app_ingress [see guest.*.proxmox.yml keyed_groups tag_]
   - pattern: "ansible/roles/apps/ingress/**"

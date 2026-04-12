@@ -22,6 +22,11 @@ crowdsec_lapi_registration_token: !vault |
 crowdsec_lapi_allowed_ranges:
   - 10.82.3.106/32
   - 10.82.3.107/32
+crowdsec_lapi_trusted_ips:
+  - 127.0.0.1
+  - "::1"
+  - 10.88.0.0/16  # Podman ingress network
+  - 10.83.0.0/16  # LCY site
 crowdsec_traefik_bouncer_name: aah-traefik
 crowdsec_traefik_bouncer_api_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256

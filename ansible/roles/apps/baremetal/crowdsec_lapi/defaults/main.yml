@@ -20,6 +20,7 @@ crowdsec_lapi_prometheus_listen_addr: 0.0.0.0
 crowdsec_lapi_prometheus_listen_port: 6060
 crowdsec_lapi_registration_token: ""
 crowdsec_lapi_allowed_ranges: []
+crowdsec_lapi_trusted_ips: []
 
 crowdsec_traefik_bouncer_name: aah-traefik
 crowdsec_traefik_bouncer_api_key: ""
