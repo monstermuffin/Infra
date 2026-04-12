@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description={{ volume_item.value.description | default(volume_item.key | replace('-', ' ') | title) }} Podman volume
+
+[Volume]
+Driver={{ volume_item.value.driver | default('local') }}
+{% for opt in volume_item.value.options | default([]) %}
+Options={{ opt }}
+{% endfor %}

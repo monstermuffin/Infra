@@ -19,6 +19,14 @@
     - network
     - setup
 
+- name: Configure Podman Quadlet volumes
+  ansible.builtin.import_tasks: volumes.yml
+  when: podman_volumes | length > 0
+  tags:
+    - podman
+    - volume
+    - setup
+
 - name: Create application user
   ansible.builtin.import_tasks: configure_user.yml
   when: podman_user is defined
