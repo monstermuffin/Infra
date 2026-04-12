@@ -233,12 +233,15 @@ def _build_host_self_commands(path: str, status: str) -> list[CommandSpec]:
                     limit=limit,
                 )
             )
+        # Pass target as extra_var so the play matches the host directly,
+        # regardless of tag_podman_app
         commands.append(
             _make_command(
                 "ansible/playbooks/lxc/deploy_podman_app.yml",
                 path=path,
                 limit=limit,
                 tags=["setup", "image", "deploy"],
+                extra_vars={"target": limit} if limit else None,
             )
         )
 

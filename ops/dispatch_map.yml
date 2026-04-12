@@ -90,6 +90,17 @@ rules:
   - pattern: "ansible/inventory/host_vars/pve*.yml"
     playbook: "ansible/playbooks/pve/system_config.yml"
 
+  # Seafile
+  - pattern: "ansible/inventory/host_vars/seafile01.aah.muffn.io/meta.yml"
+    action: noop
+
+  - pattern: "ansible/inventory/host_vars/seafile01.aah.muffn.io/linux.yml"
+    action: host_linux
+
+  - pattern: "ansible/inventory/host_vars/seafile01.aah.muffn.io/**"
+    playbook: "ansible/playbooks/vm/deploy_seafile.yml"
+    limit: "seafile01.aah.muffn.io"
+
   # Foldered host-specific files route by filename so dispatch scope stays precise
   - pattern: "ansible/inventory/host_vars/*/runner.yml"
     action: manual_notice
