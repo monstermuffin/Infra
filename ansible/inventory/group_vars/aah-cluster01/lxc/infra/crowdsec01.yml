@@ -18,6 +18,7 @@ pve_lxcs_crowdsec01:
       - os_linux
       - os_trixie
       - site_aah
+      - podman_app
       - baremetal_app
       - app_crowdsec
       - app_crowdsec_aah
