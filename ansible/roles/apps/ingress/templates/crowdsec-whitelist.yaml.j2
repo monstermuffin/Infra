@@ -1,0 +1,17 @@
+name: local-trusted-ips
+description: "{{ ingress_crowdsec_whitelist_reason }}"
+filter: "1 == 1"
+whitelist:
+  reason: "{{ ingress_crowdsec_whitelist_reason }}"
+{% if ingress_crowdsec_whitelist_ips | length > 0 %}
+  ip:
+{% for ip in ingress_crowdsec_whitelist_ips %}
+    - "{{ ip }}"
+{% endfor %}
+{% endif %}
+{% if ingress_crowdsec_whitelist_cidrs | length > 0 %}
+  cidr:
+{% for cidr in ingress_crowdsec_whitelist_cidrs %}
+    - "{{ cidr }}"
+{% endfor %}
+{% endif %}

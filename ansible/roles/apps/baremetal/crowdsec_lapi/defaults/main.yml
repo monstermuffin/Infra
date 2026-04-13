@@ -27,3 +27,6 @@ crowdsec_traefik_bouncer_api_key: ""
 crowdsec_web_ui_enabled: false
 crowdsec_web_ui_machine_name: crowdsec-web-ui
 crowdsec_web_ui_machine_password: ""
+
+crowdsec_lapi_allowlist_name: "trusted-networks"
+crowdsec_lapi_allowlist_ips: []

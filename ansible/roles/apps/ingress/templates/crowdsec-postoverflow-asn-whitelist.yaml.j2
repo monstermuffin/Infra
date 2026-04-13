@@ -1,0 +1,12 @@
+# Postoverflow whitelist: fires after a scenario triggers but before the decision
+# is sent to the LAPI. Prevents bans for trusted AS numbers.
+# Managed by Ansible - do not edit manually.
+name: local-trusted-asn
+description: "Suppress decisions for trusted AS numbers"
+filter: "1 == 1"
+whitelist:
+  reason: "Trusted AS number"
+  expression:
+{% for asn in ingress_crowdsec_whitelist_asns %}
+    - "evt.Overflow.Alert.Source.AsNumber == '{{ asn | trim }}'"
+{% endfor %}

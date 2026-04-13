@@ -80,3 +80,12 @@ ingress_crowdsec_appsec_configs:
 ingress_crowdsec_appsec_failure_block: false
 ingress_crowdsec_appsec_unreachable_block: false
 ingress_crowdsec_appsec_body_limit: 10485760
+
+ingress_crowdsec_whitelist_enabled: false
+ingress_crowdsec_whitelist_reason: "Trusted IP"
+ingress_crowdsec_whitelist_ips: []
+ingress_crowdsec_whitelist_cidrs: []
+
+ingress_crowdsec_scenario_exempt_fqdns: []
+
+ingress_crowdsec_whitelist_asns: []

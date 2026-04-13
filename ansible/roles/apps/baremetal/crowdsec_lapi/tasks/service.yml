@@ -61,3 +61,61 @@
     - crowdsec_web_ui_enabled
     - crowdsec_web_ui_machine_name not in _crowdsec_lapi_machines.stdout
   changed_when: true
+
+- name: Check existing LAPI allowlists
+  ansible.builtin.command:
+    argv:
+      - cscli
+      - allowlists
+      - list
+      - -o
+      - raw
+  register: _crowdsec_lapi_allowlists
+  changed_when: false
+  when: crowdsec_lapi_allowlist_ips | length > 0
+
+- name: Create LAPI trusted-networks allowlist
+  ansible.builtin.command:
+    argv:
+      - cscli
+      - allowlists
+      - create
+      - "{{ crowdsec_lapi_allowlist_name }}"
+      - -d
+      - "Trusted home/admin IPs - managed by Ansible"
+  when:
+    - crowdsec_lapi_allowlist_ips | length > 0
+    - crowdsec_lapi_allowlist_name not in _crowdsec_lapi_allowlists.stdout
+  changed_when: true
+
+- name: Check IPs already in LAPI allowlist
+  ansible.builtin.command:
+    argv:
+      - cscli
+      - allowlists
+      - inspect
+      - "{{ crowdsec_lapi_allowlist_name }}"
+      - -o
+      - raw
+  register: _crowdsec_lapi_allowlist_contents
+  changed_when: false
+  when: crowdsec_lapi_allowlist_ips | length > 0
+
+- name: Add IPs to LAPI allowlist
+  ansible.builtin.command:
+    argv:
+      - cscli
+      - allowlists
+      - add
+      - "{{ crowdsec_lapi_allowlist_name }}"
+      - "{{ lapi_allowlist_ip | trim }}"
+      - -d
+      - "Trusted IP - managed by Ansible"
+  loop: "{{ crowdsec_lapi_allowlist_ips }}"
+  loop_control:
+    loop_var: lapi_allowlist_ip
+  when:
+    - crowdsec_lapi_allowlist_ips | length > 0
+    - lapi_allowlist_ip | trim not in _crowdsec_lapi_allowlist_contents.stdout
+  changed_when: true
+  no_log: true

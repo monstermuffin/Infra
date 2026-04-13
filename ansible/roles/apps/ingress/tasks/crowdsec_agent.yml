@@ -115,6 +115,71 @@
     - crowdsec
     - config
 
+- name: Deploy CrowdSec IP whitelist
+  ansible.builtin.template:
+    src: crowdsec-whitelist.yaml.j2
+    dest: /etc/crowdsec/parsers/s01-whitelist/local-trusted-ips.yaml
+    mode: "0644"
+  when: ingress_crowdsec_whitelist_enabled
+  notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
+- name: Remove CrowdSec IP whitelist
+  ansible.builtin.file:
+    path: /etc/crowdsec/parsers/s01-whitelist/local-trusted-ips.yaml
+    state: absent
+  when: not ingress_crowdsec_whitelist_enabled
+  notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
+- name: Deploy CrowdSec scenario overrides (exempt FQDNs)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - src: crowdsec-scenario-http-probing.yaml.j2
+      dest: /etc/crowdsec/scenarios/http-probing.yaml
+    - src: crowdsec-scenario-http-crawl-non_statics.yaml.j2
+      dest: /etc/crowdsec/scenarios/http-crawl-non_statics.yaml
+    - src: crowdsec-scenario-http-generic-bf.yaml.j2
+      dest: /etc/crowdsec/scenarios/http-generic-bf.yaml
+  when: ingress_crowdsec_scenario_exempt_fqdns | length > 0
+  notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
+- name: Deploy CrowdSec ASN postoverflow whitelist
+  ansible.builtin.template:
+    src: crowdsec-postoverflow-asn-whitelist.yaml.j2
+    dest: /etc/crowdsec/postoverflows/s01-whitelist/local-trusted-asn.yaml
+    mode: "0644"
+  when: ingress_crowdsec_whitelist_asns | length > 0
+  notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
+- name: Remove CrowdSec ASN postoverflow whitelist
+  ansible.builtin.file:
+    path: /etc/crowdsec/postoverflows/s01-whitelist/local-trusted-asn.yaml
+    state: absent
+  when: ingress_crowdsec_whitelist_asns | length == 0
+  notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
 - name: Check CrowdSec agent LAPI credentials target
   ansible.builtin.command:
     argv:
