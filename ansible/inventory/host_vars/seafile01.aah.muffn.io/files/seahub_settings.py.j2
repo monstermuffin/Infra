@@ -1,0 +1,45 @@
+# -*- coding: utf-8 -*-
+SECRET_KEY = "{{ seafile_secret_key | trim }}"
+SERVICE_URL = "https://{{ seafile_public_hostname | trim }}"
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'seahub_db',
+        'USER': 'seafile',
+        'PASSWORD': '{{ seafile_db_password | trim }}',
+        'HOST': 'mariadb',
+        'PORT': '3306',
+        'OPTIONS': {'charset': 'utf8mb4'},
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_pylibmc.memcached.PyLibMCCache',
+        'LOCATION': 'memcached:11211',
+    },
+    'locmem': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+}
+COMPRESS_CACHE_BACKEND = 'locmem'
+
+TIME_ZONE = 'Europe/London'
+FILE_SERVER_ROOT = 'https://{{ seafile_public_hostname | trim }}/seafhttp'
+
+# Pocket ID OAuth (OIDC)
+ENABLE_OAUTH = True
+OAUTH_ENABLE_INSECURE_TRANSPORT = False
+OAUTH_CLIENT_ID = '{{ seafile_pocketid_client_id | trim }}'
+OAUTH_CLIENT_SECRET = '{{ seafile_pocketid_client_secret | trim }}'
+OAUTH_REDIRECT_URL = 'https://{{ seafile_public_hostname | trim }}/oauth/callback/'
+OAUTH_PROVIDER_DOMAIN = 'id.muffn.io'
+OAUTH_AUTHORIZATION_URL = 'https://id.muffn.io/authorize'
+OAUTH_TOKEN_URL = 'https://id.muffn.io/api/oidc/token'
+OAUTH_USER_INFO_URL = 'https://id.muffn.io/api/oidc/userinfo'
+OAUTH_USER_HEADER = 'email'
+OAUTH_SCOPE = ['openid', 'profile', 'email']
+OAUTH_ATTRIBUTE_MAP = {
+    "email": (True, "email"),
+}

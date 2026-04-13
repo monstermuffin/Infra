@@ -47,6 +47,31 @@
       register: _cloud_init_status
       when: _cloud_init_binary.stat.exists
 
+  tasks:
+    - name: Ensure NFS seafile-data volume exists with correct options
+      tags: [volumes, podman]
+      block:
+        - name: Inspect seafile-data volume
+          ansible.builtin.command: podman volume inspect {{ seafile_nfs_volume_name }}
+          become: true
+          register: _seafile_vol_inspect
+          failed_when: false
+          changed_when: false
+
+        - name: Create or recreate seafile-data NFS volume
+          ansible.builtin.shell: |
+            podman volume rm {{ seafile_nfs_volume_name }} 2>/dev/null || true
+            podman volume create \
+              --driver local \
+              --opt type=nfs \
+              --opt o={{ seafile_nfs_opts }} \
+              --opt device={{ seafile_nfs_server }}:{{ seafile_nfs_path }} \
+              {{ seafile_nfs_volume_name }}
+          become: true
+          when: >-
+            _seafile_vol_inspect.rc != 0 or
+            seafile_nfs_server not in (_seafile_vol_inspect.stdout | default(''))
+
   roles:
     - role: linux/base
       tags:

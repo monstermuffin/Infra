@@ -1,17 +1,22 @@
 ---
 podman_enabled: true
 
+seafile_nfs_server: "10.82.7.122"
+seafile_nfs_path: "/mnt/pool-01/containers/seafile"
+seafile_nfs_opts: "rw,nolock,soft,nfsvers=4"
+seafile_nfs_volume_name: "seafile-data"
+
 podman_networks:
   seafile:
     driver: bridge
 
 podman_volumes:
-  seafile-data:
+  "{{ seafile_nfs_volume_name }}":
     driver: local
     options:
       - "type=nfs"
-      - "o=addr=10.82.7.122,rw,nolock,soft,nfsvers=4"
-      - "device=:/mnt/pool-01/containers/seafile"
+      - "o={{ seafile_nfs_opts }}"
+      - "device={{ seafile_nfs_server }}:{{ seafile_nfs_path }}"
 
 podman_apps:
   mariadb:
@@ -52,9 +57,10 @@ podman_apps:
       - memcached.service
     security_label_disable: true
     volumes:
-      - seafile-data:/shared
+      - "{{ seafile_nfs_volume_name }}:/shared"
       - /opt/seafile/ssl:/shared/ssl:ro
       - /opt/seafile/nginx:/shared/nginx/conf
+      - /opt/seafile/conf/seahub_settings.py:/shared/seafile/conf/seahub_settings.py
     files:
       - dest: /opt/seafile/ssl/{{ inventory_hostname }}.crt
         content: "{{ seafile_tls_cert }}"
@@ -65,6 +71,9 @@ podman_apps:
       - dest: /opt/seafile/nginx/seafile.nginx.conf
         template_src: seafile.nginx.conf.j2
         mode: '0644'
+      - dest: /opt/seafile/conf/seahub_settings.py
+        template_src: seahub_settings.py.j2
+        mode: '0755'
     env:
       TZ: Europe/London
       TIME_ZONE: Europe/London
