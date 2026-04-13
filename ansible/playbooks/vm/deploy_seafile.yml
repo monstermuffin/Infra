@@ -68,6 +68,7 @@
               --opt device={{ seafile_nfs_server }}:{{ seafile_nfs_path }} \
               {{ seafile_nfs_volume_name }}
           become: true
+          changed_when: true
           when: >-
             _seafile_vol_inspect.rc != 0 or
             seafile_nfs_server not in (_seafile_vol_inspect.stdout | default(''))
