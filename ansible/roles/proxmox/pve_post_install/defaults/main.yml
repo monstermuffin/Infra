@@ -23,4 +23,4 @@ pve_distribution: "{{ ansible_distribution_release }}"
 # SSH key management
 pve_ssh_keys_manage: true
 pve_root_authorized_keys: "{{ root_authorized_keys | default('', true) }}"
-pve_root_authorized_keys_exclusive: true
+pve_root_authorized_keys_exclusive: false

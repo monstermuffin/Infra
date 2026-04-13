@@ -1,0 +1,16 @@
+[Unit]
+Description=SSH Agent for GitHub Actions Runner
+After=network.target
+
+[Service]
+Type=forking
+User={{ github_runner_user }}
+RuntimeDirectory=github-runner-ssh-agent
+RuntimeDirectoryMode=0700
+Environment=SSH_AUTH_SOCK=/run/github-runner-ssh-agent/agent.sock
+ExecStart=/usr/bin/ssh-agent -a /run/github-runner-ssh-agent/agent.sock
+ExecStartPost=/usr/bin/ssh-add {{ github_runner_home }}/.ssh/terraform_proxmox
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

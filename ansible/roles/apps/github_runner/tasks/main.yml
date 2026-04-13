@@ -152,6 +152,74 @@
   when: github_runner_ansible_ssh_key | length > 0
   tags: [secrets, configure]
 
+- name: Write Terraform Proxmox SSH private key
+  ansible.builtin.copy:
+    content: "{{ github_runner_terraform_ssh_key }}"
+    dest: "{{ github_runner_home }}/.ssh/terraform_proxmox"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0600"
+  no_log: true
+  when: github_runner_terraform_ssh_key | length > 0
+  tags: [secrets, configure, ssh-agent]
+
+- name: Deploy ssh-agent systemd service
+  ansible.builtin.template:
+    src: ssh-agent.service.j2
+    dest: /etc/systemd/system/github-runner-ssh-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: github_runner_terraform_ssh_key | length > 0
+  notify:
+    - Reload systemd daemon
+    - Restart ssh-agent service
+  tags: [configure, ssh-agent]
+
+- name: Enable and start ssh-agent service
+  ansible.builtin.systemd:
+    name: github-runner-ssh-agent.service
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: github_runner_terraform_ssh_key | length > 0
+  tags: [configure, ssh-agent]
+
+- name: Read installed runner service name for drop-in
+  ansible.builtin.slurp:
+    src: "{{ github_runner_home }}/.service"
+  register: _runner_service_name
+  failed_when: false
+  tags: [configure, ssh-agent]
+
+- name: Create systemd drop-in directory for runner ssh-agent dependency
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _runner_service_name.content | b64decode | trim }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - github_runner_terraform_ssh_key | length > 0
+    - _runner_service_name.content is defined
+  tags: [configure, ssh-agent]
+
+- name: Create ssh-agent dependency drop-in for runner service
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After=github-runner-ssh-agent.service
+      Wants=github-runner-ssh-agent.service
+    dest: "/etc/systemd/system/{{ _runner_service_name.content | b64decode | trim }}.d/ssh-agent.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - github_runner_terraform_ssh_key | length > 0
+    - _runner_service_name.content is defined
+  notify: Reload systemd daemon
+  tags: [configure, ssh-agent]
+
 - name: Write runner environment file
   ansible.builtin.template:
     src: runner.env.j2
@@ -160,6 +228,7 @@
     group: "{{ github_runner_user }}"
     mode: "0600"
   no_log: true
+  notify: Restart runner service
   tags: [secrets, configure]
 
 - name: Get runner registration token

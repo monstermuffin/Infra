@@ -1,0 +1,15 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart ssh-agent service
+  ansible.builtin.systemd:
+    name: github-runner-ssh-agent.service
+    state: restarted
+
+- name: Restart runner service
+  ansible.builtin.systemd:
+    name: "{{ _github_runner_service_name }}"
+    state: restarted
+  when: _github_runner_service_name is defined
