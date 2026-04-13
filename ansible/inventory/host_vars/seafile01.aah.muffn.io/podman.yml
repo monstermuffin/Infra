@@ -33,11 +33,11 @@ podman_apps:
       MARIADB_AUTO_UPGRADE: "1"
     restart: always
 
-  memcached:
+  redis:
     enabled: true
-    image: memcached
-    # renovate: datasource=docker depName=memcached versioning=docker allowedVersions=/^1\.6\.\d+$/
-    tag: "1.6"
+    image: redis
+    # renovate: datasource=docker depName=redis versioning=docker allowedVersions=/^7\.\d+\.\d+$/
+    tag: "7"
     network: seafile
     restart: always
 
@@ -45,21 +45,21 @@ podman_apps:
     enabled: true
     image: seafileltd/seafile-pro-mc
     # renovate: datasource=docker depName=seafileltd/seafile-pro-mc
-    tag: "13.0-latest"
+    tag: 13.0.20
     port: 8443
     container_port: 443
     network: seafile
     after:
       - mariadb.service
-      - memcached.service
+      - redis.service
     requires:
       - mariadb.service
-      - memcached.service
+      - redis.service
     security_label_disable: true
     volumes:
       - "{{ seafile_nfs_volume_name }}:/shared"
       - /opt/seafile/ssl:/shared/ssl:ro
-      - /opt/seafile/nginx:/shared/nginx/conf
+      - /opt/seafile/nginx/seafile.nginx.conf:/etc/nginx/sites-enabled/seafile.nginx.conf:ro
       - /opt/seafile/conf/seahub_settings.py:/shared/seafile/conf/seahub_settings.py
     files:
       - dest: /opt/seafile/ssl/{{ inventory_hostname }}.crt
@@ -80,11 +80,16 @@ podman_apps:
       SEAFILE_SERVER_HOSTNAME: "{{ inventory_hostname }}"
       DB_HOST: mariadb
       DB_ROOT_PASSWD: "{{ seafile_db_root_password | trim }}"
+      # Seafile 13.x renamed these env vars
+      SEAFILE_MYSQL_DB_HOST: mariadb
+      SEAFILE_MYSQL_DB_USER: seafile
+      SEAFILE_MYSQL_DB_PASSWORD: "{{ seafile_db_password | trim }}"
+      INIT_SEAFILE_MYSQL_ROOT_PASSWORD: "{{ seafile_db_root_password | trim }}"
       SEAFILE_ADMIN_EMAIL: "{{ seafile_admin_email | trim }}"
       SEAFILE_ADMIN_PASSWORD: "{{ seafile_admin_password | trim }}"
       SEAFILE_SERVER_LETSENCRYPT: "false"
       FORCE_HTTPS_IN_CONF: "true"
-      MEMCACHE_HOST: memcached
-      MEMCACHE_PORT: "11211"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       JWT_PRIVATE_KEY: "{{ seafile_jwt_private_key | trim }}"
     restart: always
