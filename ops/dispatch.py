@@ -29,6 +29,8 @@ class CommandSpec:
     limit: str | None = None
     tags: tuple[str, ...] = ()
     extra_vars: tuple[tuple[str, str], ...] = ()
+    # Lower priority value runs first.
+    priority: int = 10
 
     def merge_key(self) -> tuple[str, str, str | None, tuple[tuple[str, str], ...]]:
         return (str(self.workdir), self.playbook, self.limit, self.extra_vars)
@@ -41,6 +43,7 @@ class CommandSpec:
             limit=self.limit,
             tags=merged_tags,
             extra_vars=self.extra_vars,
+            priority=min(self.priority, other.priority),
         )
 
     def render(self) -> str:
@@ -127,6 +130,7 @@ def _make_command(
     tags: list[str] | tuple[str, ...] | None = None,
     extra_vars: dict[str, str] | None = None,
     workdir: Path | None = None,
+    priority: int = 10,
 ) -> CommandSpec:
     command_workdir = workdir or get_workdir({"playbook": playbook}, path)
     command_tags = tuple(tags or ())
@@ -140,15 +144,17 @@ def _make_command(
         limit=limit,
         tags=command_tags,
         extra_vars=expanded_extra_vars,
+        priority=priority,
     )
 
 
 def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
     workdir = get_workdir(rule, path)
     action = rule.get("action")
+    priority = int(rule.get("priority", 10))
 
     if action == "playbook_self":
-        return [_make_command(path, path=path, workdir=workdir)]
+        return [_make_command(path, path=path, workdir=workdir, priority=priority)]
 
     if action == "noop":
         return []
@@ -156,7 +162,7 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
     if action == "host_linux":
         linux_playbook = "ansible/playbooks/linux/manage.yml"
         limit = extract_limit(path, {})
-        return [_make_command(linux_playbook, path=path, limit=limit)]
+        return [_make_command(linux_playbook, path=path, limit=limit, priority=priority)]
 
     if action == "host_self":
         return _build_host_self_commands(path, status)
@@ -173,6 +179,7 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
             limit=limit,
             extra_vars=rule.get("extra_vars"),
             workdir=workdir,
+            priority=priority,
         )
     ]
 
@@ -204,6 +211,7 @@ def _build_dispatch_commands(path: str, limit: str | None, dispatch_config: dict
                 limit=limit,
                 tags=entry.get("tags"),
                 extra_vars=entry.get("extra_vars"),
+                priority=int(entry.get("priority", 10)),
             )
         )
     return commands
@@ -315,10 +323,12 @@ def _write_script(commands: list[CommandSpec], dry_run: bool) -> None:
         "",
     ]
 
-    if not commands:
+    sorted_commands = sorted(commands, key=lambda c: (c.priority, str(c.workdir), c.playbook))
+
+    if not sorted_commands:
         lines.append("echo 'Nothing to run.'")
     else:
-        for command in commands:
+        for command in sorted_commands:
             cmd = command.render()
             lines.append(f'echo "==> [{command.workdir.name}] {cmd}"')
             lines.append(f"if ! (cd {shlex.quote(str(command.workdir))} && {cmd}); then")

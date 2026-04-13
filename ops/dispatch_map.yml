@@ -25,6 +25,10 @@ rules:
     playbook: "ansible/playbooks/lxc/update_podman_packages.yml"
     limit: "tag_podman_app"
 
+  - pattern: "ansible/roles/proxmox/pve_build_lxc_template/**"
+    action: manual_notice
+    note: "LXC template role changed — rebuild manually: ansible-playbook playbooks/pve/build_lxc_template.yml, then update pve_lxc_default_ostemplate in group_vars/aah-cluster01/lxc.yml"
+
   # Block jobs that will sepaku the runner itself
   - pattern: "ansible/inventory/group_vars/*/lxc/**/runner*.yml"
     action: manual_notice
@@ -44,6 +48,7 @@ rules:
   # Per-cluster LXC definitions — matches any cluster group's lxc/<category>/ files
   - pattern: "ansible/inventory/group_vars/*/lxc/**/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
+    priority: 1
     limit: "{group}"
     extra_vars:
       pve_lxc_target: "{stem}"
@@ -61,6 +66,7 @@ rules:
   # Per-cluster LXC defaults (ostemplate, storage, bridge, HA/replication) — re-provision all in cluster
   - pattern: "ansible/inventory/group_vars/*/lxc.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
+    priority: 1
     limit: "{group}"
 
   # Per-cluster scratch pool dirs
@@ -71,6 +77,7 @@ rules:
   # Standalone host-specific files — must be before the pve*/** catch-all
   - pattern: "ansible/inventory/host_vars/pve*/lxc/*.yml"
     playbook: "ansible/playbooks/pve/provision_lxc.yml"
+    priority: 1
     extra_vars:
       pve_lxc_target: "{stem}"
 
@@ -184,6 +191,9 @@ rules:
   - pattern: "ansible/inventory/group_vars/proxmox.yml"
     playbook: "ansible/playbooks/pve/post_install.yml"
     limit: "proxmox"
+
+  - pattern: "ansible/playbooks/pve/build_lxc_template.yml"
+    action: manual_notice
 
   # Changed playbook runs itself directly
   - pattern: "ansible/playbooks/**/*.yml"
