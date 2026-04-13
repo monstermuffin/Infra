@@ -3,6 +3,7 @@
   ansible.builtin.fail:
     msg: "No SSH keys were configured for Proxmox root user."
   when: pve_root_authorized_keys | default('', true) | trim == ''
+  tags: [ssh, ssh_keys, keys]
 
 - name: Ensure .ssh directory exists for root
   ansible.builtin.file:
@@ -11,9 +12,11 @@
     owner: root
     group: root
     mode: '0700'
+  tags: [ssh, ssh_keys, keys]
 
 - name: Set authorized_keys for root
   ansible.posix.authorized_key:
     user: root
     key: "{{ pve_root_authorized_keys }}"
     exclusive: "{{ pve_root_authorized_keys_exclusive }}"
+  tags: [ssh, ssh_keys, keys]
