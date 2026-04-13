@@ -6,6 +6,11 @@ on:
     paths-ignore:
       - "**/*.example.*"
       - "**/*.example"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.example.*"
+      - "**/*.example"
 
 jobs:
   lint:
@@ -13,43 +18,149 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # PR runs use the branch tip so [skip ci] is read from the real commit, not the merge commit.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Install dependencies
+      - name: Determine change scope
+        id: scope
+        run: |
+          set -euo pipefail
+          MSG=$(git log -1 --format=%B)
+          if printf '%s\n' "$MSG" | grep -qiE '\[(skip ci|ci skip)\]'; then
+            echo "ci_skip=true" >> "$GITHUB_OUTPUT"
+            echo "has_ansible_yml=false" >> "$GITHUB_OUTPUT"
+            echo "has_tf=false" >> "$GITHUB_OUTPUT"
+            echo "has_lxc_inv=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=CI skipped::Commit message contains [skip ci] or [ci skip]; lint and validation were not run."
+            exit 0
+          fi
+          echo "ci_skip=false" >> "$GITHUB_OUTPUT"
+
+          : > /tmp/ansible_yml_paths.txt
+          tf_changes=false
+          lxc_check=false
+          ALL_CHANGES=()
+          FULL_SCAN=false
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            mapfile -t ALL_CHANGES < <(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.event.after }}"
+            if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BEFORE" ]]; then
+              FULL_SCAN=true
+            else
+              mapfile -t ALL_CHANGES < <(git diff --name-only "$BEFORE" "$AFTER")
+            fi
+          else
+            echo "Unsupported event: ${GITHUB_EVENT_NAME}" >&2
+            exit 1
+          fi
+
+          if [[ "$FULL_SCAN" == true ]]; then
+            printf 'push event: full scan (no usable before/after range)\n'
+            while IFS= read -r -d '' rel; do
+              [[ -z "$rel" ]] && continue
+              if [[ -f "$GITHUB_WORKSPACE/ansible/$rel" ]]; then
+                printf '%s\n' "$rel" >> /tmp/ansible_yml_paths.txt
+              fi
+            done < <(cd "$GITHUB_WORKSPACE/ansible" && git ls-files -z '*.yml' '*.yaml')
+            tf_changes=true
+            lxc_check=true
+          else
+            for f in "${ALL_CHANGES[@]}"; do
+              [[ -z "$f" ]] && continue
+              if [[ "$f" =~ ^ansible/.*\.(yml|yaml)$ ]]; then
+                if [[ -f "$GITHUB_WORKSPACE/$f" ]]; then
+                  printf '%s\n' "${f#ansible/}" >> /tmp/ansible_yml_paths.txt
+                fi
+              fi
+              if [[ "$f" == tf/* ]] || [[ "$f" == tf ]]; then
+                tf_changes=true
+              fi
+              if [[ "$f" == "ops/lxc_inventory.py" ]]; then
+                lxc_check=true
+              fi
+              if [[ "$f" =~ ^ansible/inventory/group_vars/[^/]+/lxc/ ]]; then
+                lxc_check=true
+              fi
+              if [[ "$f" =~ ^ansible/inventory/host_vars/pve[^/]*/lxc/ ]]; then
+                lxc_check=true
+              fi
+            done
+          fi
+
+          sort -u /tmp/ansible_yml_paths.txt -o /tmp/ansible_yml_paths.txt
+
+          if [[ -s /tmp/ansible_yml_paths.txt ]]; then
+            echo "has_ansible_yml=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_ansible_yml=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$tf_changes" == true ]]; then
+            echo "has_tf=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tf=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$lxc_check" == true ]]; then
+            echo "has_lxc_inv=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_lxc_inv=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Changed files in diff: ${#ALL_CHANGES[@]}"
+          echo "Ansible YAML to lint: $(wc -l </tmp/ansible_yml_paths.txt) path(s)"
+
+      - name: Install Python tooling
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && (steps.scope.outputs.has_ansible_yml == 'true' || steps.scope.outputs.has_lxc_inv == 'true') }}
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
           pip install ansible ansible-lint yamllint
 
       - name: yamllint
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_ansible_yml == 'true' }}
         run: |
+          set -euo pipefail
           . $GITHUB_WORKSPACE/.venv/bin/activate
-          while IFS= read -r -d '' file; do
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
             if python -c "import sys; data=open(sys.argv[1],'rb').read(10); sys.exit(0 if data.startswith(b'\x00GITCRYPT') else 1)" "$file" 2>/dev/null; then
               printf 'skipping git-crypt file: %s\n' "$file"
               continue
             fi
             printf 'yamllint %s\n' "$file"
             yamllint "$file"
-          done < <(git ls-files -z '*.yml' '*.yaml')
+          done < /tmp/ansible_yml_paths.txt
         working-directory: ansible
 
       - name: ansible-lint
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_ansible_yml == 'true' }}
         run: |
+          set -euo pipefail
           . $GITHUB_WORKSPACE/.venv/bin/activate
           mkdir -p secrets
           echo "dummy" > secrets/.vault_password
-          ansible-lint
+          mapfile -t files < /tmp/ansible_yml_paths.txt
+          ansible-lint "${files[@]}"
         working-directory: ansible
 
       - name: Validate LXC inventory identifiers
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_lxc_inv == 'true' }}
         run: |
           . $GITHUB_WORKSPACE/.venv/bin/activate
           python ops/lxc_inventory.py --check-duplicates
 
       - name: Setup Terraform
+        if: steps.scope.outputs.has_tf == 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Stub git-crypt encrypted TF files
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_tf == 'true' }}
         run: |
           find tf -maxdepth 2 -name "*.tf" | while IFS= read -r f; do
             if python3 -c "import sys; data=open(sys.argv[1],'rb').read(10); sys.exit(0 if data.startswith(b'\x00GITCRYPT') else 1)" "$f" 2>/dev/null; then
@@ -59,7 +170,9 @@ jobs:
           done
 
       - name: Terraform init
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_tf == 'true' }}
         run: terraform -chdir=tf init -backend=false -input=false -lockfile=readonly
 
       - name: Terraform validate
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_tf == 'true' }}
         run: terraform -chdir=tf validate
