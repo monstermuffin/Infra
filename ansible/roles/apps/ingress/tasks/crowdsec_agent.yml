@@ -115,6 +115,17 @@
     - crowdsec
     - config
 
+- name: Ensure CrowdSec parser whitelist directory exists
+  ansible.builtin.file:
+    path: /etc/crowdsec/parsers/s01-whitelist
+    state: directory
+    mode: "0755"
+  when: ingress_crowdsec_whitelist_enabled
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
 - name: Deploy CrowdSec IP whitelist
   ansible.builtin.template:
     src: crowdsec-whitelist.yaml.j2
@@ -152,6 +163,17 @@
       dest: /etc/crowdsec/scenarios/http-generic-bf.yaml
   when: ingress_crowdsec_scenario_exempt_fqdns | length > 0
   notify: Restart crowdsec
+  tags:
+    - crowdsec
+    - whitelist
+    - config
+
+- name: Ensure CrowdSec postoverflow whitelist directory exists
+  ansible.builtin.file:
+    path: /etc/crowdsec/postoverflows/s01-whitelist
+    state: directory
+    mode: "0755"
+  when: ingress_crowdsec_whitelist_asns | length > 0
   tags:
     - crowdsec
     - whitelist

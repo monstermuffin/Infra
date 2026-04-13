@@ -138,6 +138,20 @@ jobs:
           done < /tmp/ansible_yml_paths.txt
         working-directory: ansible
 
+      - name: Install Ansible Galaxy requirements
+        if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_ansible_yml == 'true' }}
+        run: |
+          set -euo pipefail
+          . $GITHUB_WORKSPACE/.venv/bin/activate
+          mkdir -p .ansible/roles .ansible/collections
+          for attempt in 1 2 3; do
+            ansible-galaxy role install -r requirements.yml --roles-path .ansible/roles && break
+            echo "Galaxy install attempt $attempt failed, retrying in $((attempt * 15))s..."
+            sleep $((attempt * 15))
+          done
+          ansible-galaxy collection install -r requirements.yml --collections-path .ansible/collections || true
+        working-directory: ansible
+
       - name: ansible-lint
         if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_ansible_yml == 'true' }}
         run: |
