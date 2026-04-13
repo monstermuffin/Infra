@@ -3,7 +3,7 @@ hostname: immich01.aah.muffn.io
 description: >-
   Immich VM.
 node_name: pve04
-vm_id: 136
+vm_id: 128
 
 cpu:
   cores: 4
@@ -13,7 +13,7 @@ memory:
   floating: 4096
 
 network:
-  ipv4_address: 10.82.7.136/24
+  ipv4_address: 10.82.7.128/24
   ipv4_gateway: 10.82.7.1
   vlan_id: 707
 
