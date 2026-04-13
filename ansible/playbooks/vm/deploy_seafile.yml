@@ -28,6 +28,7 @@
 
     - name: Gather facts
       ansible.builtin.setup:
+      tags: always
 
     - name: Check if cloud-init is installed
       ansible.builtin.stat:
@@ -59,3 +60,4 @@
       tags:
         - app
         - deploy
+

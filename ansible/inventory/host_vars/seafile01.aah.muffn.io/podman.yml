@@ -1,6 +1,10 @@
 ---
 podman_enabled: true
 
+podman_networks:
+  seafile:
+    driver: bridge
+
 podman_volumes:
   seafile-data:
     driver: local
@@ -10,6 +14,28 @@ podman_volumes:
       - "device=:/mnt/pool-01/containers/seafile"
 
 podman_apps:
+  mariadb:
+    enabled: true
+    image: mariadb
+    # renovate: datasource=docker depName=mariadb versioning=docker allowedVersions=/^10\.11\.\d+$/
+    tag: "10.11"
+    network: seafile
+    volumes:
+      - /opt/seafile/db:/var/lib/mysql
+    env:
+      MYSQL_ROOT_PASSWORD: "{{ seafile_db_root_password | trim }}"
+      MYSQL_LOG_CONSOLE: "true"
+      MARIADB_AUTO_UPGRADE: "1"
+    restart: always
+
+  memcached:
+    enabled: true
+    image: memcached
+    # renovate: datasource=docker depName=memcached versioning=docker allowedVersions=/^1\.6\.\d+$/
+    tag: "1.6"
+    network: seafile
+    restart: always
+
   seafile:
     enabled: true
     image: seafileltd/seafile-pro-mc
@@ -17,23 +43,39 @@ podman_apps:
     tag: "12.0-latest"
     port: 8443
     container_port: 443
+    network: seafile
+    after:
+      - mariadb.service
+      - memcached.service
+    requires:
+      - mariadb.service
+      - memcached.service
     security_label_disable: true
     volumes:
-      - seafile-data.volume:/shared
-      - /opt/seafile/db:/var/lib/mysql
+      - seafile-data:/shared
       - /opt/seafile/ssl:/shared/ssl:ro
+      - /opt/seafile/nginx:/shared/nginx/conf
     files:
-      - dest: /opt/seafile/ssl/seafile.crt
+      - dest: /opt/seafile/ssl/{{ inventory_hostname }}.crt
         content: "{{ seafile_tls_cert }}"
         mode: '0644'
-      - dest: /opt/seafile/ssl/seafile.key
+      - dest: /opt/seafile/ssl/{{ inventory_hostname }}.key
         content: "{{ seafile_tls_key }}"
         mode: '0600'
+      - dest: /opt/seafile/nginx/seafile.nginx.conf
+        template_src: seafile.nginx.conf.j2
+        mode: '0644'
     env:
       TZ: Europe/London
       TIME_ZONE: Europe/London
-      SEAFILE_SERVER_HOSTNAME: "{{ seafile_public_hostname | trim }}"
+      SEAFILE_SERVER_HOSTNAME: "{{ inventory_hostname }}"
+      DB_HOST: mariadb
       DB_ROOT_PASSWD: "{{ seafile_db_root_password | trim }}"
       SEAFILE_ADMIN_EMAIL: "{{ seafile_admin_email | trim }}"
       SEAFILE_ADMIN_PASSWORD: "{{ seafile_admin_password | trim }}"
       SEAFILE_SERVER_LETSENCRYPT: "false"
+      FORCE_HTTPS_IN_CONF: "true"
+      MEMCACHE_HOST: memcached
+      MEMCACHE_PORT: "11211"
+      JWT_PRIVATE_KEY: "{{ seafile_jwt_private_key | trim }}"
+    restart: always
