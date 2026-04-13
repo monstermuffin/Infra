@@ -141,25 +141,35 @@ run_vm_bootstrap() {
   )
 }
 
-overall_status=0
+ansible_status=0
+terraform_status=0
+bootstrap_status=0
 
 if ! run_ansible; then
-  overall_status=1
+  ansible_status=1
 fi
 
 if [ -n "$(tf_files_changed)" ]; then
-  if ! preflight_vm_check; then
-    overall_status=1
+  if ! preflight_guest_check; then
+    terraform_status=1
   elif ! run_terraform; then
-    overall_status=1
+    terraform_status=1
   fi
 else
   echo "No tf/ files changed; skipping Terraform"
 fi
 
-if [ "$overall_status" -eq 0 ] && ! run_vm_bootstrap; then
-  overall_status=1
+# Bootstrap is independent of Ansible — only skip if Terraform itself failed,
+# since there would be nothing to bootstrap.
+if [ "$terraform_status" -eq 0 ]; then
+  if ! run_vm_bootstrap; then
+    bootstrap_status=1
+  fi
+else
+  echo "Skipping VM bootstrap: Terraform did not complete successfully"
 fi
+
+overall_status=$(( ansible_status | terraform_status | bootstrap_status ))
 
 if [ "$overall_status" -eq 0 ]; then
   echo "$SHA" > "$LAST_SHA_FILE"
