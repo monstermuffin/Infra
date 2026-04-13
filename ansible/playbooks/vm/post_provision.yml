@@ -1,0 +1,31 @@
+---
+# One-time post-provisioning tasks for TF-created VMs.
+
+- name: Post-provision VM cleanup
+  hosts: "{{ target | default('tag_vm_app') }}"
+  gather_facts: false
+  vars:
+    ansible_user: "{{ linux_manage_user | default('ansible') }}"
+
+  tasks:
+    - name: Get VM ID and current node from Proxmox cluster
+      ansible.builtin.shell: |
+        set -o pipefail
+        path=$(grep -rl "^name: {{ inventory_hostname }}$" /etc/pve/nodes/*/qemu-server/)
+        echo "$(echo $path | grep -o 'nodes/[^/]*' | cut -d/ -f2) $(echo $path | grep -o '[0-9]*\.conf' | grep -o '[0-9]*')"
+      args:
+        executable: /bin/bash
+      delegate_to: "{{ proxmox_node }}"
+      register: _vm_info
+      changed_when: false
+
+    - name: Remove cloud-init drive and snippet reference from VM config
+      ansible.builtin.command: qm set {{ _vm_info.stdout.split()[1] }} --delete ide2 --delete cicustom
+      delegate_to: "{{ _vm_info.stdout.split()[0] }}.{{ proxmox_node.split('.')[1:] | join('.') }}"
+      when: _vm_info.stdout != ""
+      changed_when: true
+
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        sleep: 5
+        timeout: 300

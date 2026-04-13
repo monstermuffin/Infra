@@ -1,9 +1,10 @@
 ---
-# Set the Proxmox LXC container description (note) with app-specific info.
+# Set the Proxmox guest description (note) with app-specific info.
+# Works for both LXC containers (pct set) and VMs (qm set).
 #
 # Required vars:
-#   lxc_note_vmid:          VMID of the container
-#   lxc_note_node:          Proxmox node FQDN to delegate pct commands
+#   lxc_note_vmid:          VMID of the container or VM
+#   lxc_note_node:          Proxmox node FQDN to delegate commands
 #
 # Structured mode:
 #   lxc_note_app_name:      App display name (e.g. "Radarr")
@@ -12,6 +13,9 @@
 #
 # Raw mode (pass pre-built content):
 #   lxc_note_content:       Full note content (skips template rendering)
+#
+# Guest type detection (optional — defaults to LXC):
+#   proxmox_vmtype:         "lxc" or "qemu" (set by community.proxmox inventory plugin)
 
 - name: "LXC note | Build note from structured vars"
   ansible.builtin.set_fact:
@@ -34,13 +38,22 @@
   become: true
   ansible.builtin.copy:
     content: "{{ lxc_note_content | default(_lxc_note_rendered) }}"
-    dest: "/tmp/ansible_lxc_{{ lxc_note_vmid }}_note.txt"
+    dest: "/tmp/ansible_guest_{{ lxc_note_vmid }}_note.txt"
     mode: "0600"
   delegate_to: "{{ lxc_note_node }}"
 
-- name: "LXC note | Set container description in Proxmox"
+- name: "LXC note | Set guest description in Proxmox (LXC)"
   become: true
   ansible.builtin.shell: |
-    pct set {{ lxc_note_vmid }} --description "$(cat /tmp/ansible_lxc_{{ lxc_note_vmid }}_note.txt)"
+    pct set {{ lxc_note_vmid }} --description "$(cat /tmp/ansible_guest_{{ lxc_note_vmid }}_note.txt)"
   delegate_to: "{{ lxc_note_node }}"
   changed_when: true
+  when: (proxmox_vmtype | default('lxc')) != 'qemu'
+
+- name: "LXC note | Set guest description in Proxmox (VM)"
+  become: true
+  ansible.builtin.shell: |
+    qm set {{ lxc_note_vmid }} --description "$(cat /tmp/ansible_guest_{{ lxc_note_vmid }}_note.txt)"
+  delegate_to: "{{ lxc_note_node }}"
+  changed_when: true
+  when: (proxmox_vmtype | default('lxc')) == 'qemu'
