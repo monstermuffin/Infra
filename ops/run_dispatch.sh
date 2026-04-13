@@ -113,6 +113,15 @@ tf_files_changed() {
   fi
 }
 
+preflight_vm_check() {
+  local base="${LAST_SUCCESSFUL_SHA:-}"
+  local args=()
+  if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+    args+=(--base "$base")
+  fi
+  python3 ops/preflight_guest_check.py "${args[@]}" --head "$SHA"
+}
+
 run_vm_bootstrap() {
   local vm_limit
   vm_limit=$(changed_vm_hosts)
@@ -139,7 +148,9 @@ if ! run_ansible; then
 fi
 
 if [ -n "$(tf_files_changed)" ]; then
-  if ! run_terraform; then
+  if ! preflight_vm_check; then
+    overall_status=1
+  elif ! run_terraform; then
     overall_status=1
   fi
 else
