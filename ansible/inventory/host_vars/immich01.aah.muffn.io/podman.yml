@@ -3,7 +3,7 @@ podman_enabled: true
 
 immich_nfs_server: "10.82.7.122"
 immich_nfs_path: "/mnt/pool-01/containers/immich"
-immich_nfs_opts: "rw,nolock,soft,nfsvers=4"
+immich_nfs_opts: "addr={{ immich_nfs_server }},rw,nolock,soft,nfsvers=4"
 immich_upload_volume_name: "immich-upload"
 
 immich_smb_server: "10.82.7.122"
@@ -43,16 +43,14 @@ podman_volumes:
     driver: local
   "{{ immich_upload_volume_name }}":
     driver: local
-    options:
-      - "type=nfs"
-      - "o={{ immich_nfs_opts }}"
-      - "device={{ immich_nfs_server }}:{{ immich_nfs_path }}"
+    type: nfs
+    device: "{{ immich_nfs_server }}:{{ immich_nfs_path }}"
+    options: "{{ immich_nfs_opts }}"
   "{{ immich_smb_volume_name }}":
     driver: local
-    options:
-      - "type=cifs"
-      - "o=username={{ smb_username }},password={{ smb_password }},ro"
-      - "device=//{{ immich_smb_server }}/{{ immich_smb_share }}"
+    type: cifs
+    device: "//{{ immich_smb_server }}/{{ immich_smb_share }}"
+    options: "username={{ smb_username }},password={{ smb_password }},ro"
 
 podman_apps:
   immich-postgres:
@@ -96,8 +94,8 @@ podman_apps:
       - immich-postgres.service
       - immich-redis.service
     volumes:
-      - "{{ immich_upload_volume_name }}:/usr/src/app/upload"
-      - "{{ immich_smb_volume_name }}:/usr/src/app/external/photos:ro"
+      - "{{ immich_upload_volume_name }}.volume:/usr/src/app/upload"
+      - "{{ immich_smb_volume_name }}.volume:/usr/src/app/external/photos:ro"
       - /etc/localtime:/etc/localtime:ro
     env:
       TZ: Europe/London
