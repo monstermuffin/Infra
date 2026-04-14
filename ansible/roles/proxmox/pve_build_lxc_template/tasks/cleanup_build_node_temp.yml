@@ -1,0 +1,10 @@
+---
+- name: Remove temp files from build node
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/pve_build_bootstrap.sh
+    - /tmp/pve_build_root_keys
+    - /tmp/pve_build_ansible_keys
+    - /tmp/pve_build_muffin_keys

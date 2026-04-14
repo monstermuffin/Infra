@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+{
+  {% for ns in pve_build_template_effective_dns_servers %}
+  echo "nameserver {{ ns }}"
+  {% endfor %}
+} >/etc/resolv.conf
+
+if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+    sed -i 's/^Components:.*/Components: contrib main non-free non-free-firmware/' \
+        /etc/apt/sources.list.d/debian.sources
+fi
+
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq {{ pve_build_template_packages | join(' ') }}
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+
+if ! id ansible &>/dev/null; then
+    useradd -m -s /bin/bash ansible
+fi
+usermod -aG sudo ansible
+echo 'ansible ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ansible
+chmod 0440 /etc/sudoers.d/ansible
+
+if ! id muffin &>/dev/null; then
+    useradd -m -s /bin/bash muffin
+fi
+usermod -aG sudo muffin
+echo 'muffin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/muffin
+chmod 0440 /etc/sudoers.d/muffin
+
+install -d -m 700 /root/.ssh
+install -d -m 700 -o ansible -g ansible /home/ansible/.ssh
+install -d -m 700 -o muffin  -g muffin  /home/muffin/.ssh
+
+rm -f /etc/ssh/ssh_host_*
+truncate -s 0 /etc/machine-id
+find /var/log -type f -exec truncate -s 0 {} \;
+rm -rf /tmp/* /var/tmp/*

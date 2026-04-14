@@ -1,6 +1,6 @@
 ---
 # Cluster-wide LXC defaults. Overridable per-container in lxc_*.yml files.
-pve_lxc_default_ostemplate: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+pve_lxc_default_ostemplate: "local:vztmpl/muffn-debian-13_amd64.tar.zst"
 pve_lxc_default_storage: "local-zfs"
 pve_lxc_default_network_bridge: "vmbr1"
 

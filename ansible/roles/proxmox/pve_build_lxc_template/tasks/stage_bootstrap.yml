@@ -1,0 +1,36 @@
+---
+- name: Render bootstrap script on build node
+  ansible.builtin.template:
+    src: bootstrap.sh.j2
+    dest: /tmp/pve_build_bootstrap.sh
+    mode: "0755"
+
+- name: Write root authorized_keys to build node temp file
+  ansible.builtin.copy:
+    content: "{{ pve_build_template_root_authorized_keys }}"
+    dest: /tmp/pve_build_root_keys
+    mode: "0600"
+
+- name: Write ansible authorized_keys to build node temp file
+  ansible.builtin.copy:
+    content: "{{ pve_build_template_ansible_authorized_keys }}"
+    dest: /tmp/pve_build_ansible_keys
+    mode: "0600"
+
+- name: Write muffin authorized_keys to build node temp file
+  ansible.builtin.copy:
+    content: "{{ pve_build_template_muffin_authorized_keys }}"
+    dest: /tmp/pve_build_muffin_keys
+    mode: "0600"
+
+- name: Push bootstrap script into build container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct push {{ pve_build_template_vmid }} /tmp/pve_build_bootstrap.sh /tmp/bootstrap.sh --perms 0755"
+  changed_when: true
+
+- name: Execute bootstrap script inside build container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ pve_build_template_vmid }} -- bash /tmp/bootstrap.sh"
+  changed_when: true

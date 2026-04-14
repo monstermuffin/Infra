@@ -1,0 +1,13 @@
+---
+# Usage:
+#   ansible-playbook playbooks/pve/build_lxc_template.yml
+#   ansible-playbook playbooks/pve/build_lxc_template.yml -e build_node=pve03.aah.muffn.io
+#   ansible-playbook playbooks/pve/build_lxc_template.yml -e pve_build_template_distribute=false
+
+- name: Build custom bootstrapped LXC template
+  hosts: "{{ build_node | default('pve02.aah.muffn.io') }}"
+  gather_facts: true
+  become: false
+
+  roles:
+    - pve_build_lxc_template

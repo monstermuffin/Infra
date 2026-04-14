@@ -586,10 +586,6 @@
     - _lxc.ha.enabled | default(false) | bool
     - _lxc_ha_check.rc | default(1) == 0
 
-- name: "Bootstrap new container — {{ _lxc_name }}"
-  ansible.builtin.include_tasks: bootstrap_lxc.yml
-  when: not _lxc_exists and _lxc.start | default(true)
-
 - name: "Display provisioning result — {{ _lxc_name }}"
   ansible.builtin.debug:
     msg: >-

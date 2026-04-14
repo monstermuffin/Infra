@@ -1,0 +1,21 @@
+---
+# Order: explicit list > site_nameservers (group_vars per site) > PVE host resolvers > AAH DNS VM
+- name: Set effective DNS list for template build
+  ansible.builtin.set_fact:
+    pve_build_template_effective_dns_servers: >-
+      {{
+        (_pbt_dns_override | length > 0) | ternary(
+          _pbt_dns_override,
+          (_pbt_dns_site | length > 0) | ternary(
+            _pbt_dns_site,
+            (_pbt_dns_from_host | length > 0) | ternary(
+              _pbt_dns_from_host,
+              ['10.82.7.102']
+            )
+          )
+        )
+      }}
+  vars:
+    _pbt_dns_override: "{{ pve_build_template_dns_servers | default([]) }}"
+    _pbt_dns_site: "{{ site_nameservers | default([]) }}"
+    _pbt_dns_from_host: "{{ (ansible_dns | default({})).nameservers | default([]) }}"

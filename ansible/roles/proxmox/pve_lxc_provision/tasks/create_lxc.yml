@@ -1,25 +1,4 @@
 ---
-# Creation tasks for new LXC containers.
-# Only included when the container does not yet exist.
-# Stages SSH keys on the target node, ensures the ostemplate is cached, then creates the container.
-
-- name: "Initialize SSH key file on target node — {{ _lxc_name }}"
-  become: true
-  ansible.builtin.copy:
-    content: ""
-    dest: /tmp/ansible_lxc_ssh_keys.pub
-    mode: "0644"
-  delegate_to: "{{ _lxc_delegate_host }}"
-
-- name: "Write bootstrap SSH public keys to target node — {{ _lxc_name }}"
-  become: true
-  ansible.builtin.lineinfile:
-    path: /tmp/ansible_lxc_ssh_keys.pub
-    line: "{{ item }}"
-    insertafter: EOF
-  loop: "{{ _ssh_keys }}"
-  delegate_to: "{{ _lxc_delegate_host }}"
-
 - name: "Parse ostemplate storage and filename — {{ _lxc_name }}"
   ansible.builtin.set_fact:
     _lxc_template_storage: "{{ (_lxc.ostemplate | default(pve_lxc_default_ostemplate)).split(':')[0] }}"
@@ -65,7 +44,6 @@
       --features {{ _lxc_features | trim }}
       {{ '--nameserver ' ~ (_lxc_effective_nameserver | quote) if _lxc_effective_nameserver | length > 0 else '' }}
       {{ '--searchdomain ' ~ (_lxc_effective_searchdomain | quote) if _lxc_effective_searchdomain | length > 0 else '' }}
-      --ssh-public-keys /tmp/ansible_lxc_ssh_keys.pub
       --tags {{ (_lxc.tags | default([]) + [_lxc_name]) | join(';') }}
       {% for mp_key, mp_val in _lxc_bind_mounts.items() %}
       --{{ mp_key }} {{ mp_val }}

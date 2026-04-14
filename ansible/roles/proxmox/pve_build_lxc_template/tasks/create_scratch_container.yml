@@ -1,0 +1,53 @@
+---
+- name: Compose pct net0 for scratch CT
+  ansible.builtin.set_fact:
+    _pbt_pct_net0: >-
+      {{
+        'name=eth0,bridge=' ~ pve_build_template_network_bridge
+        ~ ',ip=' ~ pve_build_template_network_ip
+        ~ ',gw=' ~ pve_build_template_network_gw
+        ~ ',tag=' ~ (pve_build_template_network_vlan | string)
+      }}
+
+- name: Create scratch build container
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      pct create {{ pve_build_template_vmid }}
+      {{ pve_build_template_base_ostemplate }}
+      --hostname {{ pve_build_template_scratch_hostname }}
+      --storage {{ pve_build_template_storage }}
+      --rootfs {{ pve_build_template_storage }}:8
+      --cores {{ pve_build_template_cores }}
+      --memory {{ pve_build_template_memory }}
+      --swap 0
+      --unprivileged 1
+      --net0 {{ _pbt_pct_net0 }}
+      {{ '--nameserver ' ~ (pve_build_template_effective_dns_servers | join(' ') | quote) if pve_build_template_effective_dns_servers | length > 0 else '' }}
+  changed_when: true
+
+- name: Start build container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct start {{ pve_build_template_vmid }}"
+  changed_when: true
+
+- name: Wait for build container to be running
+  become: true
+  ansible.builtin.command:
+    cmd: "pct status {{ pve_build_template_vmid }}"
+  register: _pbt_running
+  until: "'running' in (_pbt_running.stdout | default(''))"
+  retries: 30
+  delay: 5
+  changed_when: false
+
+- name: Wait for build container to accept exec commands
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ pve_build_template_vmid }} -- true"
+  register: _pbt_exec_ready
+  until: _pbt_exec_ready.rc == 0
+  retries: 20
+  delay: 3
+  changed_when: false

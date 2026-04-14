@@ -1,0 +1,26 @@
+---
+- name: Check if build VMID already exists
+  become: true
+  ansible.builtin.command:
+    cmd: "pct status {{ pve_build_template_vmid }}"
+  register: _pbt_existing
+  failed_when: false
+  changed_when: false
+
+- name: Stop build container if running
+  become: true
+  ansible.builtin.command:
+    cmd: "pct stop {{ pve_build_template_vmid }}"
+  when:
+    - _pbt_existing.rc == 0
+    - "'running' in (_pbt_existing.stdout | default(''))"
+  failed_when: false
+  changed_when: true
+
+- name: Destroy existing build container or template
+  become: true
+  ansible.builtin.command:
+    cmd: "pct destroy {{ pve_build_template_vmid }}"
+  when: _pbt_existing.rc == 0
+  failed_when: false
+  changed_when: true

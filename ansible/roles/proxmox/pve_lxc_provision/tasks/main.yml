@@ -179,24 +179,6 @@
   tags:
     - always
 
-- name: Fail if LXC bootstrap SSH keys are empty
-  ansible.builtin.fail:
-    msg: "No bootstrap SSH keys were configured for LXC provisioning."
-  when:
-    - _pve_lxcs_effective | length > 0
-    - pve_lxc_bootstrap_authorized_keys_list | default([]) | length == 0
-  tags:
-    - provision
-    - create
-
-- name: Set bootstrap SSH public keys fact
-  ansible.builtin.set_fact:
-    _ssh_keys: "{{ pve_lxc_bootstrap_authorized_keys_list }}"
-  when: _pve_lxcs_effective | length > 0
-  tags:
-    - provision
-    - create
-
 - name: Include LXC provisioning tasks
   ansible.builtin.include_tasks: provision_lxc.yml
   loop: "{{ _pve_lxcs_effective | dict2items }}"

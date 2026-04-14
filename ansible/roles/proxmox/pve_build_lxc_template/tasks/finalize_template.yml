@@ -1,0 +1,84 @@
+---
+- name: Stop build container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct stop {{ pve_build_template_vmid }}"
+  changed_when: true
+
+- name: Wait for build container to stop
+  become: true
+  ansible.builtin.command:
+    cmd: "pct status {{ pve_build_template_vmid }}"
+  register: _pbt_stopped
+  until: "'stopped' in (_pbt_stopped.stdout | default(''))"
+  retries: 30
+  delay: 5
+  changed_when: false
+
+- name: Resolve path to base ostemplate on build node
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pvesm
+      - path
+      - "{{ pve_build_template_base_ostemplate }}"
+  register: _pbt_pvesm_path
+  changed_when: false
+
+- name: Set vztmpl directory fact
+  ansible.builtin.set_fact:
+    _pbt_vztmpl_dir: "{{ _pbt_pvesm_path.stdout | dirname }}"
+
+- name: Remove net0 from scratch container for generic vztmpl
+  become: true
+  ansible.builtin.command:
+    cmd: "pct set {{ pve_build_template_vmid }} --delete net0"
+  when: pve_build_template_strip_net0 | bool
+  changed_when: true
+
+- name: Export stopped container as vzdump archive into vztmpl directory
+  become: true
+  ansible.builtin.command:
+    argv:
+      - vzdump
+      - "{{ pve_build_template_vmid | string }}"
+      - --mode
+      - stop
+      - --compress
+      - zstd
+      - --dumpdir
+      - "{{ _pbt_vztmpl_dir }}"
+  changed_when: true
+
+- name: Find vzdump output archive
+  become: true
+  ansible.builtin.find:
+    paths: "{{ _pbt_vztmpl_dir }}"
+    patterns: "vzdump-lxc-{{ pve_build_template_vmid }}-*.tar.zst"
+    file_type: file
+  register: _pbt_vzdump_find
+
+- name: Select newest vzdump file (handles leftover files from failed runs)
+  ansible.builtin.set_fact:
+    _pbt_vzdump_path: "{{ (_pbt_vzdump_find.files | sort(attribute='mtime', reverse=true) | first).path }}"
+  when: _pbt_vzdump_find.files | length > 0
+
+- name: Set desired template path
+  ansible.builtin.set_fact:
+    _pbt_desired_path: "{{ _pbt_vztmpl_dir }}/{{ pve_build_template_name }}.tar.zst"
+
+- name: Fail if vzdump did not produce an archive
+  ansible.builtin.fail:
+    msg: >-
+      No vzdump-lxc-{{ pve_build_template_vmid }}-*.tar.zst in {{ _pbt_vztmpl_dir }} after vzdump.
+  when: _pbt_vzdump_find.files | length == 0
+
+- name: Rename vzdump archive to stable vztmpl filename
+  become: true
+  ansible.builtin.command:
+    argv:
+      - mv
+      - "{{ _pbt_vzdump_path }}"
+      - "{{ _pbt_desired_path }}"
+  changed_when: true
+  when: _pbt_vzdump_find.files | length > 0

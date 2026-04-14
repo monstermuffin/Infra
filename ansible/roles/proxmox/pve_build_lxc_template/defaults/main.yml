@@ -1,0 +1,50 @@
+---
+pve_build_template_vmid: 9000
+
+pve_build_template_base_ostemplate: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+
+pve_build_template_storage: "local-zfs"
+
+pve_build_template_network_bridge: "vmbr1"
+
+pve_build_template_network_ip: "10.82.7.250/24"
+pve_build_template_network_gw: "10.82.7.1"
+pve_build_template_network_vlan: 707
+
+pve_build_template_dns_servers: []
+
+pve_build_template_cores: 4
+pve_build_template_memory: 1024
+
+pve_build_template_name: "muffn-debian-13_amd64"
+
+pve_build_template_scratch_hostname: "lxc-builder"
+
+# Strip net0 before vzdump so new CTs get a fresh interface from pct create / automation.
+pve_build_template_strip_net0: true
+
+pve_build_template_packages:
+  - ca-certificates
+  - curl
+  - git
+  - htop
+  - rsync
+  - sudo
+  - tmux
+  - vim
+
+# SSH keys — sourced from group_vars/all.yml
+pve_build_template_root_authorized_keys: "{{ root_authorized_keys | default('', true) }}"
+pve_build_template_ansible_authorized_keys: "{{ ansible_authorized_keys | default('', true) }}"
+pve_build_template_muffin_authorized_keys: "{{ muffin_authorized_keys | default('', true) }}"
+
+pve_build_template_distribute: true
+
+pve_build_template_distribute_nodes: []
+
+# Controller dir
+pve_build_template_controller_staging_dir: "/tmp/ansible_pve_build_template"
+
+pve_build_template_controller_remove_staging_after: true
+
+pve_build_template_distribute_ignore_unreachable: false

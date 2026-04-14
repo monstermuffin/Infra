@@ -1,0 +1,153 @@
+---
+- name: Resolve connection identities for this host (distribute exclusion)
+  ansible.builtin.set_fact:
+    _pbt_build_refs: >-
+      {{
+        (
+          [inventory_hostname | string, ansible_host | default('', true) | string]
+          + (
+            [hostvars[inventory_hostname].ansible_host | string]
+            if (inventory_hostname in hostvars)
+            and (hostvars[inventory_hostname].ansible_host | default('') | length > 0)
+            else []
+          )
+          + (
+            [ansible_default_ipv4.address | string]
+            if (ansible_default_ipv4 is defined)
+            and (ansible_default_ipv4.address | default('') | length > 0)
+            else []
+          )
+        )
+        | reject('equalto', '')
+        | unique
+        | list
+      }}
+  when: pve_build_template_distribute | bool
+
+- name: Determine raw distribution candidates
+  ansible.builtin.set_fact:
+    _pbt_raw_candidates: >-
+      {{
+        pve_build_template_distribute_nodes
+        if (pve_build_template_distribute_nodes | length > 0)
+        else (groups['proxmox'] | default([]))
+      }}
+  when: pve_build_template_distribute | bool
+
+- name: Initialize distribution target list
+  ansible.builtin.set_fact:
+    _pbt_distribute_nodes: []
+  when: pve_build_template_distribute | bool
+
+- name: Add each Proxmox host except the build node to distribution targets
+  ansible.builtin.set_fact:
+    _pbt_distribute_nodes: "{{ _pbt_distribute_nodes + [item] }}"
+  loop: "{{ _pbt_raw_candidates | default([]) }}"
+  when:
+    - pve_build_template_distribute | bool
+    - item not in _pbt_build_refs
+    - (hostvars[item].ansible_host | default('') | string) not in _pbt_build_refs
+  loop_control:
+    label: "{{ item }}"
+
+- name: Ensure Ansible controller staging directory exists
+  ansible.builtin.file:
+    path: "{{ pve_build_template_controller_staging_dir }}"
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  when:
+    - pve_build_template_distribute | bool
+    - (_pbt_distribute_nodes | default([]) | length) > 0
+
+- name: Fetch built template from build node to Ansible controller
+  ansible.builtin.fetch:
+    src: "{{ _pbt_desired_path }}"
+    dest: "{{ pve_build_template_controller_staging_dir }}/"
+    flat: true
+  become: true
+  when:
+    - pve_build_template_distribute | bool
+    - (_pbt_distribute_nodes | default([]) | length) > 0
+
+- name: Set path to template artifact on Ansible controller
+  ansible.builtin.set_fact:
+    _pbt_controller_artifact: "{{ pve_build_template_controller_staging_dir }}/{{ pve_build_template_name }}.tar.zst"
+  when:
+    - pve_build_template_distribute | bool
+    - (_pbt_distribute_nodes | default([]) | length) > 0
+
+- name: Push template from Ansible controller to other Proxmox nodes
+  ansible.builtin.copy:
+    src: "{{ _pbt_controller_artifact }}"
+    dest: "{{ _pbt_vztmpl_dir }}/"
+    mode: "0644"
+  become: true
+  delegate_to: "{{ item }}"
+  loop: "{{ _pbt_distribute_nodes | default([]) }}"
+  register: _pbt_push_results
+  ignore_unreachable: "{{ pve_build_template_distribute_ignore_unreachable | bool }}"
+  when:
+    - pve_build_template_distribute | bool
+    - (_pbt_distribute_nodes | default([]) | length) > 0
+
+- name: Summarize template push failures
+  ansible.builtin.set_fact:
+    _pbt_push_failures: "{{ (_pbt_unreachable_items + _pbt_failed_items) | unique | list }}"
+  vars:
+    _pbt_unreachable_items: >-
+      {{
+        _pbt_push_results.results | default([])
+        | selectattr('unreachable', 'defined')
+        | selectattr('unreachable')
+        | map(attribute='item')
+        | list
+      }}
+    _pbt_failed_items: >-
+      {{
+        _pbt_push_results.results | default([])
+        | selectattr('failed', 'defined')
+        | selectattr('failed')
+        | map(attribute='item')
+        | list
+      }}
+  when:
+    - pve_build_template_distribute | bool
+    - _pbt_push_results is defined
+    - pve_build_template_distribute_ignore_unreachable | bool
+
+- name: Report template push failures
+  ansible.builtin.debug:
+    msg: >-
+      Template push did not complete for: {{ _pbt_push_failures | join(', ') }}.
+      Fix DNS/connectivity or inventory; set pve_build_template_controller_remove_staging_after: false to keep the controller copy for retry.
+  when:
+    - pve_build_template_distribute | bool
+    - pve_build_template_distribute_ignore_unreachable | bool
+    - (_pbt_push_failures | default([]) | length) > 0
+
+- name: Remove template artifact from Ansible controller after distribution
+  ansible.builtin.file:
+    path: "{{ _pbt_controller_artifact }}"
+    state: absent
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  when:
+    - pve_build_template_distribute | bool
+    - pve_build_template_controller_remove_staging_after | bool
+    - (_pbt_distribute_nodes | default([]) | length) > 0
+
+- name: Show template build summary
+  ansible.builtin.debug:
+    msg: >-
+      Template '{{ pve_build_template_name }}.tar.zst' is at {{ _pbt_desired_path }} on {{ inventory_hostname }}.
+      {% if (_pbt_distribute_nodes | default([]) | length) > 0 %}
+      Copied to other nodes via the Ansible controller (no host-to-host SSH).
+      {% else %}
+      No other Proxmox hosts to copy to (inventory); ostemplate is on this node only.
+      {% endif %}
+      pve_lxc_default_ostemplate remains local:vztmpl/{{ pve_build_template_name }}.tar.zst.
+  when: pve_build_template_distribute | bool

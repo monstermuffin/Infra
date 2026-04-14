@@ -1,0 +1,27 @@
+---
+- name: Resolve DNS for scratch build
+  ansible.builtin.include_tasks: resolve_build_dns.yml
+
+- name: Cache base ostemplate
+  ansible.builtin.include_tasks: cache_base_ostemplate.yml
+
+- name: Reclaim build VMID
+  ansible.builtin.include_tasks: cleanup_build_vmid.yml
+
+- name: Create scratch container
+  ansible.builtin.include_tasks: create_scratch_container.yml
+
+- name: Run bootstrap
+  ansible.builtin.include_tasks: stage_bootstrap.yml
+
+- name: Install SSH authorized_keys in container
+  ansible.builtin.include_tasks: push_authorized_keys.yml
+
+- name: Remove staging files on build node
+  ansible.builtin.include_tasks: cleanup_build_node_temp.yml
+
+- name: Convert container to template tarball
+  ansible.builtin.include_tasks: finalize_template.yml
+
+- name: Copy template to other nodes
+  ansible.builtin.include_tasks: distribute_template.yml

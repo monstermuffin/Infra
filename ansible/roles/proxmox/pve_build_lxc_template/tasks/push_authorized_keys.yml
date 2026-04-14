@@ -1,0 +1,30 @@
+---
+- name: Push root authorized_keys into container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct push {{ pve_build_template_vmid }} /tmp/pve_build_root_keys /root/.ssh/authorized_keys --perms 0600"
+  changed_when: true
+
+- name: Push ansible authorized_keys into container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct push {{ pve_build_template_vmid }} /tmp/pve_build_ansible_keys /home/ansible/.ssh/authorized_keys --perms 0600"
+  changed_when: true
+
+- name: Fix ownership of ansible authorized_keys
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ pve_build_template_vmid }} -- chown ansible:ansible /home/ansible/.ssh/authorized_keys"
+  changed_when: true
+
+- name: Push muffin authorized_keys into container
+  become: true
+  ansible.builtin.command:
+    cmd: "pct push {{ pve_build_template_vmid }} /tmp/pve_build_muffin_keys /home/muffin/.ssh/authorized_keys --perms 0600"
+  changed_when: true
+
+- name: Fix ownership of muffin authorized_keys
+  become: true
+  ansible.builtin.command:
+    cmd: "pct exec {{ pve_build_template_vmid }} -- chown muffin:muffin /home/muffin/.ssh/authorized_keys"
+  changed_when: true

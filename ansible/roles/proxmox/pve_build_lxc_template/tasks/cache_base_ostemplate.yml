@@ -1,0 +1,19 @@
+---
+- name: Parse base ostemplate storage and filename
+  ansible.builtin.set_fact:
+    _pbt_base_storage: "{{ pve_build_template_base_ostemplate.split(':')[0] }}"
+    _pbt_base_file: "{{ pve_build_template_base_ostemplate.split('/')[-1] }}"
+
+- name: Check if base ostemplate is cached
+  become: true
+  ansible.builtin.command:
+    cmd: "pveam list {{ _pbt_base_storage }}"
+  register: _pbt_pveam_list
+  changed_when: false
+
+- name: Download base ostemplate if not cached
+  become: true
+  ansible.builtin.command:
+    cmd: "pveam download {{ _pbt_base_storage }} {{ _pbt_base_file }}"
+  changed_when: true
+  when: _pbt_base_file not in (_pbt_pveam_list.stdout | default(''))
