@@ -1,0 +1,112 @@
+---
+podman_enabled: true
+
+immich_nfs_server: "10.82.7.122"
+immich_nfs_path: "/mnt/pool-01/containers/immich"
+immich_nfs_opts: "rw,nolock,soft,nfsvers=4"
+immich_upload_volume_name: "immich-upload"
+
+immich_smb_server: "10.82.7.122"
+immich_smb_share: "photos"
+immich_smb_volume_name: "immich-photos-lib"
+
+immich_db_username: postgres
+immich_db_name: immich
+
+immich_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33396263356264323037363861663366646635646133643930663063383062613830343835616464
+          3839363136346464366263623831353366383135663163360a666634346264353961323938313865
+          61313039383832343430343835316437376436373633636636646130313732313237306164313439
+          3363333436326466330a663339383662616334376539376462343263666463643432613266393232
+          61303338396563303966323037383966343834343736666662643961333539376461656266383034
+          37636132316330626538393062303138613737373735643864636337363238373633663131623163
+          32306565386439373237333364666166646632646130366232643933346464333235313565613030
+          66373831373130353866
+
+smb_username: immich
+smb_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          32376465326131356364383535623338323130353535626261386261343865623137323964646635
+          6366663861653563626436396636383730643261646339320a393039303063363364373131393837
+          37636439626139306637313330386638366235316336336466343832363835366462343939323132
+          6433616666356235640a396238303662623263313764343261346261373462356563666231373732
+          30643464373930623763383365353736663232616562633563373132373962613365643736303936
+          3336376636363062646431316564323138643139313936353432
+
+podman_networks:
+  immich:
+    driver: bridge
+
+podman_volumes:
+  immich-postgres-data:
+    driver: local
+  "{{ immich_upload_volume_name }}":
+    driver: local
+    options:
+      - "type=nfs"
+      - "o={{ immich_nfs_opts }}"
+      - "device={{ immich_nfs_server }}:{{ immich_nfs_path }}"
+  "{{ immich_smb_volume_name }}":
+    driver: local
+    options:
+      - "type=cifs"
+      - "o=username={{ smb_username }},password={{ smb_password }},ro"
+      - "device=//{{ immich_smb_server }}/{{ immich_smb_share }}"
+
+podman_apps:
+  immich-postgres:
+    enabled: true
+    image: ghcr.io/immich-app/postgres
+    # renovate: datasource=docker depName=ghcr.io/immich-app/postgres
+    tag: 14-vectorchord0.4.2-pgvectors0.2.0
+    container_name: immich-postgres
+    network: immich
+    volumes:
+      - immich-postgres-data:/var/lib/postgresql/data
+    env:
+      POSTGRES_USER: "{{ immich_db_username }}"
+      POSTGRES_PASSWORD: "{{ immich_db_password | trim }}"
+      POSTGRES_DB: "{{ immich_db_name }}"
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      DB_STORAGE_TYPE: SSD
+    restart: always
+
+  immich-redis:
+    enabled: true
+    image: docker.io/valkey/valkey
+    # renovate: datasource=docker depName=docker.io/valkey/valkey
+    tag: 8-bookworm
+    container_name: immich-redis
+    network: immich
+    restart: always
+
+  immich-server:
+    enabled: true
+    image: ghcr.io/immich-app/immich-server
+    # renovate: datasource=docker depName=ghcr.io/immich-app/immich-server
+    tag: v2.7.5
+    container_name: immich-server
+    port: 2283
+    network: immich
+    after:
+      - immich-postgres.service
+      - immich-redis.service
+    requires:
+      - immich-postgres.service
+      - immich-redis.service
+    volumes:
+      - "{{ immich_upload_volume_name }}:/usr/src/app/upload"
+      - "{{ immich_smb_volume_name }}:/usr/src/app/external/photos:ro"
+      - /etc/localtime:/etc/localtime:ro
+    env:
+      TZ: Europe/London
+      DB_HOSTNAME: immich-postgres
+      DB_USERNAME: "{{ immich_db_username }}"
+      DB_PASSWORD: "{{ immich_db_password | trim }}"
+      DB_DATABASE_NAME: "{{ immich_db_name }}"
+      REDIS_HOSTNAME: immich-redis
+      IMMICH_MACHINE_LEARNING_URL: "http://immich-ml01.aah.muffn.io:3003"
+      IMMICH_TELEMETRY_INCLUDE: all
+      VIPS_NOVECTOR: "1"
+    restart: always
