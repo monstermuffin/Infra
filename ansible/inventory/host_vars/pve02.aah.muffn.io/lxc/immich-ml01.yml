@@ -1,5 +1,5 @@
 ---
-pve_lxcs_immich-ml01:
+pve_lxcs_immich_ml01:
   immich-ml01:
     vmid: 137
     hostname: immich-ml01.aah.muffn.io
