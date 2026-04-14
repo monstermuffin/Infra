@@ -5,6 +5,7 @@ seafile_nfs_server: "10.82.7.122"
 seafile_nfs_path: "/mnt/pool-01/containers/seafile"
 seafile_nfs_opts: "rw,nolock,soft,nfsvers=4"
 seafile_nfs_volume_name: "seafile-data"
+seafile_max_download_dir_size_mb: 10240
 
 podman_networks:
   seafile:
@@ -60,6 +61,7 @@ podman_apps:
       - "{{ seafile_nfs_volume_name }}:/shared"
       - /opt/seafile/ssl:/shared/ssl:ro
       - /opt/seafile/nginx/seafile.nginx.conf:/etc/nginx/sites-enabled/seafile.nginx.conf:ro
+      - /opt/seafile/conf/seafile.conf:/shared/seafile/conf/seafile.conf
       - /opt/seafile/conf/seahub_settings.py:/shared/seafile/conf/seahub_settings.py
     files:
       - dest: /opt/seafile/ssl/{{ inventory_hostname }}.crt
@@ -74,10 +76,14 @@ podman_apps:
       - dest: /opt/seafile/conf/seahub_settings.py
         template_src: seahub_settings.py.j2
         mode: '0755'
+      - dest: /opt/seafile/conf/seafile.conf
+        template_src: seafile.conf.j2
+        mode: '0644'
     env:
       TZ: Europe/London
       TIME_ZONE: Europe/London
-      SEAFILE_SERVER_HOSTNAME: "{{ inventory_hostname }}"
+      SEAFILE_SERVER_HOSTNAME: "{{ seafile_public_hostname | trim }}"
+      SEAFILE_SERVER_PROTOCOL: "https"
       DB_HOST: mariadb
       DB_ROOT_PASSWD: "{{ seafile_db_root_password | trim }}"
       # Seafile 13.x renamed these env vars
