@@ -5,6 +5,12 @@ Description={{ volume_item.value.description | default(volume_item.key | replace
 
 [Volume]
 Driver={{ volume_item.value.driver | default('local') }}
-{% for opt in volume_item.value.options | default([]) %}
-Options={{ opt }}
-{% endfor %}
+{% if volume_item.value.type is defined %}
+Type={{ volume_item.value.type }}
+{% endif %}
+{% if volume_item.value.device is defined %}
+Device={{ volume_item.value.device }}
+{% endif %}
+{% if volume_item.value.options is defined %}
+Options={{ volume_item.value.options }}
+{% endif %}

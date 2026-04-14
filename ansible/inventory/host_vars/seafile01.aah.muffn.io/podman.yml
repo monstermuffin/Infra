@@ -14,10 +14,9 @@ podman_networks:
 podman_volumes:
   "{{ seafile_nfs_volume_name }}":
     driver: local
-    options:
-      - "type=nfs"
-      - "o={{ seafile_nfs_opts }}"
-      - "device={{ seafile_nfs_server }}:{{ seafile_nfs_path }}"
+    type: nfs
+    device: "{{ seafile_nfs_server }}:{{ seafile_nfs_path }}"
+    options: "{{ seafile_nfs_opts }}"
 
 podman_apps:
   mariadb:
