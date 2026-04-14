@@ -150,7 +150,7 @@ if ! run_ansible; then
 fi
 
 if [ -n "$(tf_files_changed)" ]; then
-  if ! preflight_guest_check; then
+  if ! preflight_vm_check; then
     terraform_status=1
   elif ! run_terraform; then
     terraform_status=1
