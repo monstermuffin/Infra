@@ -78,6 +78,8 @@
     - mount_source.stat is defined
     - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
     - not (mount_source.stat.exists and (mount_source.stat.mode | default('')) in ['1777', '01777'])
+    # not symlink
+    - not (mount_source.stat.islnk | default(false))
 
 - name: Track setup changes from managed bind mount directories for {{ _app_name }}
   ansible.builtin.set_fact:

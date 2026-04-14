@@ -49,6 +49,14 @@
   ],
   "packageRules": [
     {
+      "description": "Immich - group server and ML container updates together",
+      "groupName": "immich",
+      "matchDepNames": [
+        "ghcr.io/immich-app/immich-server",
+        "ghcr.io/immich-app/immich-machine-learning"
+      ]
+    },
+    {
       "description": "Security - automerge immediately",
       "prPriority": 100,
       "matchCategories": ["security"],
