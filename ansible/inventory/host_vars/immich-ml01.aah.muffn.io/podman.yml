@@ -1,0 +1,18 @@
+---
+podman_enabled: true
+
+podman_volumes:
+  model-cache:
+    driver: local
+
+podman_apps:
+  immich-ml:
+    enabled: true
+    image: ghcr.io/immich-app/immich-machine-learning
+    # renovate: datasource=docker depName=ghcr.io/immich-app/immich-machine-learning versioning=regex:^v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-openvino$
+    tag: v2.7.5-openvino
+    port: 3003
+    volumes:
+      - model-cache:/cache
+    env:
+      MPLCONFIGDIR: /tmp/matplotlib
