@@ -1,0 +1,42 @@
+---
+podman_enabled: true
+
+podman_networks:
+  owntracks: {}
+
+podman_apps:
+  owntracks-recorder:
+    enabled: true
+    image: owntracks/recorder
+    # renovate: datasource=docker depName=owntracks/recorder
+    tag: 1.0.1
+    container_name: owntracks-recorder
+    network: owntracks
+    port: 8083
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /opt/owntracks/store:/store
+      - /opt/owntracks/config:/config
+    env:
+      TZ: UTC
+      OTR_PORT: "0"
+      OTR_STORAGEDIR: /store
+      OTR_TOPIC: "owntracks/#"
+
+  owntracks-frontend:
+    enabled: true
+    image: owntracks/frontend
+    # renovate: datasource=docker depName=owntracks/frontend
+    tag: 2.15.3
+    container_name: owntracks-frontend
+    network: owntracks
+    port: 80
+    container_port: 80
+    after:
+      - owntracks-recorder.service
+    requires:
+      - owntracks-recorder.service
+    env:
+      SERVER_HOST: owntracks-recorder
+      SERVER_PORT: "8083"
+      LISTEN_PORT: "80"
