@@ -4,7 +4,9 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
-  tags: packages
+  tags:
+    - packages
+    - setup
 
 - name: Build Podman package specs
   ansible.builtin.set_fact:
@@ -24,13 +26,17 @@
         else item
       }}
   loop: "{{ podman_packages }}"
-  tags: packages
+  tags:
+    - packages
+    - setup
 
 - name: Install Podman packages
   ansible.builtin.apt:
     name: "{{ _podman_package_specs }}"
     state: present
-  tags: packages
+  tags:
+    - packages
+    - setup
 
 - name: Create containers config directory
   ansible.builtin.file:
@@ -61,9 +67,13 @@
     cmd: podman --version
   register: podman_version_output
   changed_when: false
-  tags: verify
+  tags:
+    - verify
+    - setup
 
 - name: Display Podman version
   ansible.builtin.debug:
     msg: "Podman installed: {{ podman_version_output.stdout }}"
-  tags: verify
+  tags:
+    - verify
+    - setup
