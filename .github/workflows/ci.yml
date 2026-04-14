@@ -171,7 +171,7 @@ jobs:
 
       - name: Setup Terraform
         if: steps.scope.outputs.has_tf == 'true'
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: Stub git-crypt encrypted TF files
         if: ${{ steps.scope.outputs.ci_skip != 'true' && steps.scope.outputs.has_tf == 'true' }}
