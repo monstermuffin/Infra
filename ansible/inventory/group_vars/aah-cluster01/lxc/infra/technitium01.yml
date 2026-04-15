@@ -4,8 +4,8 @@ pve_lxcs_technitium01:
     vmid: 102
     hostname: technitium01.aah.muffn.io
     node: pve04
-    cores: 1
-    memory: 1024
+    cores: 2
+    memory: 2048
     swap: 512
     disk: "16G"
     network_ip: "10.82.7.102/24"
