@@ -123,9 +123,9 @@ pve01_lcy_exporter_token_value: !vault |
 
 pve_exporter_targets:
   pve02_aah:
-    - 10.82.2.152
+    - pve02.aah.muffn.io
   aah_cluster01:
-    - 10.82.2.153
-    - 10.82.2.154
+    - pve03.aah.muffn.io
+    - pve04.aah.muffn.io
   pve01_lcy:
-    - 10.83.2.40
+    - pve01.lcy.muffn.io
