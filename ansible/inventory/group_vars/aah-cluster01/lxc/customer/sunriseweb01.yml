@@ -13,7 +13,6 @@ pve_lxcs_sunriseweb01:
     network_gw: "10.82.3.100"
     network_vlan: 703
     unprivileged: true
-    runtime: podman
     tags:
       - ansible
       - os_linux

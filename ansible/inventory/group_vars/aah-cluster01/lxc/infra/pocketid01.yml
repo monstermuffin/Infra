@@ -14,7 +14,6 @@ pve_lxcs_pocketid01:
     network_vlan: 707
     unprivileged: true
     onboot: true
-    runtime: podman
     tags:
       - ansible
       - os_linux

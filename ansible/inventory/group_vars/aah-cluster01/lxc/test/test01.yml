@@ -15,7 +15,6 @@ pve_lxcs_test01:
     unprivileged: true
     onboot: false
     start: true
-    runtime: podman
     tags:
       - ansible
       - os_linux

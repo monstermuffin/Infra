@@ -15,7 +15,6 @@ pve_lxcs_runner01:
     unprivileged: true
     onboot: true
     start: true
-    runtime: baremetal
     tags:
       - ansible
       - os_linux

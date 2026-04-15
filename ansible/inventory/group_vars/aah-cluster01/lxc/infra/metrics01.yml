@@ -15,7 +15,6 @@ pve_lxcs_metrics01:
     unprivileged: true
     onboot: true
     start: true
-    runtime: podman
     tags:
       - ansible
       - os_linux

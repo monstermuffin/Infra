@@ -13,7 +13,6 @@ pve_lxcs_jellyfin01:
     network_gw: "10.82.10.1"
     network_vlan: 710
     unprivileged: true
-    runtime: podman
     tags:
       - ansible
       - os_linux

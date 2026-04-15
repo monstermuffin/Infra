@@ -12,7 +12,6 @@ pve_lxcs_crowdsec01:
     network_gw: "10.82.7.1"
     network_vlan: 707
     unprivileged: true
-    runtime: baremetal
     tags:
       - ansible
       - os_linux
