@@ -133,6 +133,13 @@ rules:
   - pattern: "ansible/inventory/host_vars/*/crowdsec.yml"
     playbook: "ansible/playbooks/lxc/deploy_crowdsec_lapi.yml"
 
+  # Template files (*.j2, etc.) under host_vars/<host>/files/ — trigger the host's podman deploy
+  - pattern: "ansible/inventory/host_vars/*/files/**"
+    playbook: "ansible/playbooks/lxc/deploy_podman_app.yml"
+    extra_vars:
+      target: "{host}"
+    tags: [setup, image, deploy]
+
   # Fallback for other split host_vars files that self-declare their deploy path
   - pattern: "ansible/inventory/host_vars/*/*.yml"
     action: host_self

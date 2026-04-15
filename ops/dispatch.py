@@ -103,12 +103,17 @@ def extract_limit(path: str, rule: dict) -> str | None:
 def _expand_template(val: str, path: str) -> str:
     # Expand {stem} to the filename stem (e.g. runner01 from .../runner01.yml).
     val = val.replace("{stem}", Path(path).stem)
-    # Expand {group} to the group name immediately under group_vars/ in the path.
     parts = Path(path).parts
+    # Expand {group} to the group name immediately under group_vars/ in the path.
     if "group_vars" in parts:
         idx = parts.index("group_vars")
         if idx + 1 < len(parts):
             val = val.replace("{group}", parts[idx + 1])
+    # Expand {host} to the hostname immediately under host_vars/ in the path.
+    if "host_vars" in parts:
+        idx = parts.index("host_vars")
+        if idx + 1 < len(parts):
+            val = val.replace("{host}", parts[idx + 1])
     return val
 
 
