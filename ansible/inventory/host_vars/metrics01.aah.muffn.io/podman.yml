@@ -1,6 +1,9 @@
 ---
 podman_enabled: true
 
+podman_networks:
+  metrics: {}
+
 podman_apps:
   prometheus:
     enabled: true
@@ -8,6 +11,7 @@ podman_apps:
     # renovate: datasource=docker depName=prom/prometheus
     tag: v3.11.2
     port: 9090
+    network: metrics
     uid: 65534
     gid: 65534
     volumes:
@@ -34,10 +38,15 @@ podman_apps:
     # renovate: datasource=docker depName=grafana/grafana
     tag: 13.0.0
     port: 3000
+    network: metrics
     uid: 472
     gid: 0
     volumes:
       - /opt/metrics01/grafana:/var/lib/grafana
+      - /opt/metrics01/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    files:
+      - dest: /opt/metrics01/grafana-provisioning/datasources/prometheus.yml
+        template_src: grafana-datasources.yml.j2
     env:
       TZ: Europe/London
       GF_SERVER_ROOT_URL: "https://metrics.muffn.io"
