@@ -13,6 +13,32 @@
     label: "{{ vol | split(':') | first }}"
   when: (vol | split(':') | first) is match('^/(?!(dev|proc|sys|run|tmp|mnt)(/|$))')
 
+- name: Probe which bind mount sources are mountpoints for {{ _app_name }}
+  ansible.builtin.command:
+    cmd: "mountpoint -q {{ vol | split(':') | first | quote }}"
+  register: _podman_mountpoint_probe
+  loop: "{{ _app.volumes | default([]) }}"
+  loop_control:
+    loop_var: vol
+    label: "{{ vol | split(':') | first }}"
+  when: (vol | split(':') | first) is match('^/(?!(dev|proc|sys|run|tmp|mnt)(/|$))')
+  changed_when: false
+  failed_when: false
+
+- name: Build mountpoint path set for {{ _app_name }}
+  ansible.builtin.set_fact:
+    _podman_mountpoints: >-
+      {{
+        _podman_mountpoint_probe.results
+        | selectattr('skipped', 'undefined')
+        | selectattr('rc', 'defined')
+        | selectattr('rc', 'equalto', 0)
+        | map(attribute='vol')
+        | map('split', ':')
+        | map('first')
+        | list
+      }}
+
 - name: Create bind mount directories for {{ _app_name }}
   ansible.builtin.file:
     path: >-
@@ -43,6 +69,8 @@
     - not (mount_source.stat.exists and mount_source.stat.isreg | default(false))
     - mount_source.stat.exists
     - (mount_source.stat.mode | default('')) in ['1777', '01777']
+    # LXC mountpoints can't be chown'd and so skip
+    - (vol | split(':') | first) not in _podman_mountpoints
 
 - name: Track setup changes from existing bind mount directories for {{ _app_name }}
   ansible.builtin.set_fact:
@@ -80,6 +108,8 @@
     - not (mount_source.stat.exists and (mount_source.stat.mode | default('')) in ['1777', '01777'])
     # not symlink
     - not (mount_source.stat.islnk | default(false))
+    # LXC mountpoints can't be chown'd and so skip
+    - (vol | split(':') | first) not in _podman_mountpoints
 
 - name: Track setup changes from managed bind mount directories for {{ _app_name }}
   ansible.builtin.set_fact:
