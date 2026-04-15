@@ -6,11 +6,11 @@ node_name: pve04
 vm_id: 135
 
 cpu:
-  cores: 4
+  cores: 12
 
 memory:
-  dedicated: 12288
-  floating: 12288
+  dedicated: 16384
+  floating: 16384
 
 network:
   ipv4_address: 10.82.7.135/24
