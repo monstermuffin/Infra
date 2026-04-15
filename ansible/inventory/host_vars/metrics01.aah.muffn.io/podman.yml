@@ -9,7 +9,7 @@ podman_apps:
     enabled: true
     image: victoriametrics/victoria-metrics
     # renovate: datasource=docker depName=victoriametrics/victoria-metrics
-    tag: v1.115.0
+    tag: v1.140.0
     ports:
       - 8428:8428
       - 2003:2003
@@ -25,8 +25,7 @@ podman_apps:
         mode: "0644"
     exec: >-
       -storageDataPath=/victoria-metrics-data
-      -retentionPeriod=10y
-      -downsampling.period=30d:1m,365d:5m
+      -retentionPeriod=2y
       -promscrape.config=/etc/victoria-metrics/scrape.yml
       -graphiteListenAddr=:2003
     env:
@@ -44,7 +43,7 @@ podman_apps:
     files:
       - dest: /opt/metrics01/pve-exporter.yml
         template_src: pve-exporter.yml.j2
-        mode: "0600"
+        mode: "0644"
     exec: --config.file=/etc/pve-exporter/pve-exporter.yml
     env:
       TZ: Europe/London
