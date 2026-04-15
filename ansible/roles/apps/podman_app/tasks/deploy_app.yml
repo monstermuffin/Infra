@@ -77,6 +77,17 @@
     state: started
   when: _app.service_start | default(true)
 
+- name: Wait for service port for {{ _app_name }}
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ _app.port | default(_app.ports[0].split(':')[0]) }}"
+    delay: 2
+    timeout: 90
+  when:
+    - _app.service_start | default(true)
+    - _app.port is defined or _app.ports is defined
+    - _quadlet_result.changed or _image_changed or _setup_changed
+
 - name: Reload Podman network rules for {{ _app_name }}
   # noqa: no-handler
   ansible.builtin.command:
@@ -86,21 +97,11 @@
       - reload
       - "{{ _app.container_name | default(_app_name) }}"
   changed_when: false
+  failed_when: false
   when:
     - _app.service_start | default(true)
     - _quadlet_result.changed or _image_changed or _setup_changed
     - _app.network_mode is not defined
-
-- name: Wait for service port for {{ _app_name }}
-  ansible.builtin.wait_for:
-    host: 127.0.0.1
-    port: "{{ _app.port }}"
-    delay: 2
-    timeout: 90
-  when:
-    - _app.service_start | default(true)
-    - _app.port is defined
-    - _quadlet_result.changed or _image_changed or _setup_changed
 
 - name: Get service status for {{ _app_name }}
   ansible.builtin.systemd:
