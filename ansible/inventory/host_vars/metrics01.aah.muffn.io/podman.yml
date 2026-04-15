@@ -63,7 +63,9 @@ podman_apps:
       GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
       GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: "email"
       GF_AUTH_SIGNOUT_REDIRECT_URL: "https://id.muffn.io/logout"
-      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'grafana_admin') && 'Admin' || contains(groups[*], 'grafana_viewer') && 'Viewer' || 'Viewer'"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: >-
+        contains(groups[*], 'grafana_admin') && 'Admin' ||
+        contains(groups[*], 'grafana_viewer') && 'Viewer' || 'Viewer'
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_AUTH_BASIC_ENABLED: "false"
 
