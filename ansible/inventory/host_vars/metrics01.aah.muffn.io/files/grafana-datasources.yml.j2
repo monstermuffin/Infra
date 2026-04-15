@@ -3,10 +3,10 @@
 apiVersion: 1
 
 datasources:
-  - name: aah-prometheus
+  - name: aah-VictoriaMetrics
     type: prometheus
-    uid: prometheus
-    url: http://prometheus:9090
+    uid: victoriametrics
+    url: http://victoriametrics:8428
     isDefault: true
     editable: false
     jsonData:
