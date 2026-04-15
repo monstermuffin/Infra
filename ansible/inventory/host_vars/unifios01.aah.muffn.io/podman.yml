@@ -9,8 +9,18 @@ podman_apps:
     tag: v1.0.0
     description: UniFi OS Server
     network_mode: host
+    # UniFi OS runs systemd as PID 1 which needs CAP_SYS_ADMIN to mount tmpfs at
+    # /run and /run/lock on startup. Without --privileged the container exits 255
+    # immediately in detached mode even though it appears to work in foreground.
     privileged: true
+    # Unprivileged LXC blocks nested user namespace creation (newuidmap fails).
+    # userns=host skips the extra namespace and uses the LXC's own namespace.
+    userns: host
     shm_size: 64m
+    # Quadlet hardcodes --cgroups=split which conflicts in an unprivileged LXC.
+    # --cgroups=disabled (appended last) overrides it.
+    podman_args:
+      - "--cgroups=disabled"
     volumes:
       - /opt/unifios/persistent:/persistent
       - /opt/unifios/var-log:/var/log
