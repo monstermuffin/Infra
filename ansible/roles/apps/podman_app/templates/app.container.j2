@@ -59,7 +59,18 @@ AddCapability={{ cap }}
 ShmSize={{ _app.shm_size }}
 {% endif %}
 
-{% if _app.privileged | default(false) or _app.security_label_disable | default(false) %}
+{% if _app.userns is defined %}
+UserNS={{ _app.userns }}
+{% endif %}
+
+{% for arg in _app.podman_args | default([]) %}
+PodmanArgs={{ arg }}
+{% endfor %}
+
+{% if _app.privileged | default(false) %}
+SecurityLabelDisable=true
+PodmanArgs=--privileged
+{% elif _app.security_label_disable | default(false) %}
 SecurityLabelDisable=true
 {% endif %}
 
