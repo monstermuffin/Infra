@@ -1,0 +1,23 @@
+---
+podman_enabled: true
+
+podman_apps:
+  unifios:
+    enabled: true
+    image: ghcr.io/lemker/unifi-os-server
+    # renovate: datasource=docker depName=ghcr.io/lemker/unifi-os-server
+    tag: v1.0.0
+    description: UniFi OS Server
+    network_mode: host
+    privileged: true
+    shm_size: 64m
+    volumes:
+      - /opt/unifios/persistent:/persistent
+      - /opt/unifios/var-log:/var/log
+      - /opt/unifios/data:/data
+      - /opt/unifios/srv:/srv
+      - /opt/unifios/var-lib-unifi:/var/lib/unifi
+      - /opt/unifios/var-lib-mongodb:/var/lib/mongodb
+      - /opt/unifios/etc-rabbitmq-ssl:/etc/rabbitmq/ssl
+    env:
+      UOS_SYSTEM_IP: "10.82.7.144"

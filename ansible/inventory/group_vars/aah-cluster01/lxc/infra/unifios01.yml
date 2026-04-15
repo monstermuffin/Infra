@@ -1,0 +1,24 @@
+---
+pve_lxcs_unifios01:
+  unifios01:
+    vmid: 144
+    hostname: unifios01.aah.muffn.io
+    node: pve03
+    cores: 2
+    memory: 1024
+    swap: 512
+    disk: "32G"
+    network_ip: "10.82.7.145/24"
+    network_gw: "10.82.7.1"
+    network_vlan: 707
+    unprivileged: true
+    tags:
+      - ansible
+      - os_linux
+      - os_trixie
+      - site_aah
+      - podman_app
+      - app_unifios
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
