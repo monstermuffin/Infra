@@ -79,6 +79,9 @@ Label={{ label }}={{ value }}
 {% endfor %}
 
 [Service]
+# Force-remove any stale container entry from Podman's DB before starting.
+# Attmept to fix stale Netavark nftables DNAT rules.
+ExecStartPre=-/usr/bin/podman rm --ignore --force {{ _app.container_name | default(_app_name) }}
 Restart={{ _app.restart | default('always') }}
 {% if _app.restart_sec is defined %}
 RestartSec={{ _app.restart_sec }}

@@ -108,7 +108,7 @@
     host: 127.0.0.1
     port: "{{ _app.port | default(_app.ports[0].split(':')[0]) }}"
     delay: 2
-    timeout: 120
+    timeout: "{{ _app.startup_timeout | default(20) }}"
   when:
     - _app.service_start | default(true)
     - _app.port is defined or _app.ports is defined
