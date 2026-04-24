@@ -7,6 +7,7 @@
   "minimumReleaseAge": "3 days",
   "minimumReleaseAgeBehaviour": "timestamp-optional",
   "rebaseWhen": "behind-base-branch",
+  "separateMajorMinor": false,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "customManagers": [
