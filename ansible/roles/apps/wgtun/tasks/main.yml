@@ -12,8 +12,31 @@
     - "{{ wgtun_config_dir }}/gluetun/auth"
     - "{{ wgtun_config_dir }}/qbittorrent"
     - "{{ wgtun_config_dir }}/firefox"
-    - "{{ wgtun_config_dir }}/filebrowser"
   tags: [directories, setup]
+
+- name: Create filebrowser config directory
+  ansible.builtin.file:
+    path: "{{ wgtun_config_dir }}/filebrowser"
+    state: directory
+    owner: 1000
+    group: 1000
+    mode: "0750"
+  tags: [directories, setup]
+
+- name: Seed filebrowser config
+  ansible.builtin.copy:
+    dest: "{{ wgtun_config_dir }}/filebrowser/config.yaml"
+    owner: 1000
+    group: 1000
+    mode: "0640"
+    force: false
+    content: |
+      server:
+        sources:
+          - path: /srv
+            config:
+              defaultEnabled: true
+  tags: [filebrowser, config]
 
 - name: Deploy gluetun auth config
   ansible.builtin.template:
