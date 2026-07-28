@@ -18,6 +18,7 @@ podman_apps:
       - /mnt/media/tv:/tv
       - /mnt/media/music:/music
       - /mnt/media/youtube:/youtube
+      - /mnt/media/patreon:/patreon
     devices:
       - /dev/dri/renderD128
       - /dev/dri/card0
