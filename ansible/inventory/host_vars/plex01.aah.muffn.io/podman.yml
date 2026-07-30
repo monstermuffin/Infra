@@ -11,7 +11,7 @@ podman_apps:
     gid: 1000
     network_mode: host
     tmpfs:
-      - /transcode
+      - /transcode:size=6G
     volumes:
       - /opt/plex/config:/config
       - /mnt/media/movies:/movies
