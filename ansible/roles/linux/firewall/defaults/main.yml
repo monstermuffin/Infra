@@ -1,0 +1,26 @@
+---
+firewall_input_policy: drop
+firewall_forward_policy: accept
+firewall_output_policy: accept
+
+firewall_allow_loopback: true
+firewall_allow_established: true
+firewall_allow_icmp: true
+
+# Source CIDRs that are fully trusted (e.g. container bridge networks needing
+# DNS/API access to the host). Traffic from these is accepted unconditionally.
+firewall_trusted_sources: []
+
+# Container network CIDRs. Used to scope forward-chain restrictions to inbound
+# DNAT'd traffic only, so outbound container traffic is not affected.
+firewall_container_networks: []
+
+# Lists of ports open to all sources
+firewall_allowed_tcp_ports: []
+firewall_allowed_udp_ports: []
+
+# Ports restricted to specific source IP/CIDR ranges
+# - port: 9100
+#   sources: ["10.82.0.0/16", "10.83.0.0/16"]
+firewall_restricted_tcp_ports: []
+firewall_restricted_udp_ports: []

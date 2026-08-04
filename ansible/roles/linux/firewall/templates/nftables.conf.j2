@@ -1,0 +1,81 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+
+# Only manage our table; Netavark/iptables-nft own 'ip nat' and 'ip filter'.
+add table inet filter
+flush table inet filter
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy {{ firewall_input_policy }};
+{% if firewall_allow_loopback %}
+
+        iifname lo accept comment "loopback"
+{% endif %}
+{% if firewall_allow_established %}
+
+        ct state invalid drop
+        ct state { established, related } accept
+{% endif %}
+{% if firewall_trusted_sources %}
+
+{% for source in firewall_trusted_sources %}
+        ip saddr {{ source }} accept comment "trusted"
+{% endfor %}
+{% endif %}
+{% if firewall_allow_icmp %}
+
+        ip protocol icmp accept comment "ICMPv4"
+        ip6 nexthdr icmpv6 accept comment "ICMPv6"
+{% endif %}
+{% if firewall_allowed_tcp_ports %}
+
+{% for port in firewall_allowed_tcp_ports %}
+        tcp dport {{ port }} accept
+{% endfor %}
+{% endif %}
+{% if firewall_allowed_udp_ports %}
+
+{% for port in firewall_allowed_udp_ports %}
+        udp dport {{ port }} accept
+{% endfor %}
+{% endif %}
+{% if firewall_restricted_tcp_ports %}
+
+{% for rule in firewall_restricted_tcp_ports %}
+        ip saddr { {{ rule.sources | join(', ') }} } tcp dport {{ rule.port }} accept
+{% endfor %}
+{% endif %}
+{% if firewall_restricted_udp_ports %}
+
+{% for rule in firewall_restricted_udp_ports %}
+        ip saddr { {{ rule.sources | join(', ') }} } udp dport {{ rule.port }} accept
+{% endfor %}
+{% endif %}
+    }
+
+    chain forward {
+        # Netavark/iptables-nft manages its own forward rules in the 'ip filter' table.
+        type filter hook forward priority filter; policy {{ firewall_forward_policy }};
+
+        # Enforce restricted port rules for inbound DNAT'd container traffic.
+        # Matches only traffic destined FOR containers (post-DNAT destination in
+        # firewall_container_networks) so outbound container traffic is unaffected.
+{% if firewall_container_networks and firewall_restricted_tcp_ports %}
+
+{% for rule in firewall_restricted_tcp_ports %}
+        ip daddr { {{ firewall_container_networks | join(', ') }} } ip saddr != { {{ rule.sources | join(', ') }} } tcp dport {{ rule.port }} drop
+{% endfor %}
+{% endif %}
+{% if firewall_container_networks and firewall_restricted_udp_ports %}
+
+{% for rule in firewall_restricted_udp_ports %}
+        ip daddr { {{ firewall_container_networks | join(', ') }} } ip saddr != { {{ rule.sources | join(', ') }} } udp dport {{ rule.port }} drop
+{% endfor %}
+{% endif %}
+    }
+
+    chain output {
+        type filter hook output priority filter; policy {{ firewall_output_policy }};
+    }
+}
