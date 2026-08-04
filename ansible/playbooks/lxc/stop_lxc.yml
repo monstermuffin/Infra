@@ -1,0 +1,42 @@
+---
+# Gracefully shut down an LXC container via its Proxmox node.
+# Triggered automatically when disabled.yml is added to host_vars/<hostname>/.
+#
+# Manual run:
+#   ansible-playbook playbooks/lxc/stop_lxc.yml -e lxc_target=radarr01.aah.muffn.io
+
+- name: Resolve Proxmox node for {{ lxc_target }}
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Load meta.yml for {{ lxc_target }}
+      ansible.builtin.slurp:
+        src: "{{ playbook_dir }}/../../inventory/host_vars/{{ lxc_target }}/meta.yml"
+      register: _lxc_meta_raw
+
+    - name: Register Proxmox node in temporary group
+      ansible.builtin.add_host:
+        name: "{{ (_lxc_meta_raw.content | b64decode | from_yaml).proxmox_node }}"
+        groups: _lxc_stop_node
+
+- name: Stop container on Proxmox node
+  hosts: _lxc_stop_node
+  gather_facts: false
+
+  tasks:
+    - name: Find VMID for {{ lxc_target }} (running only)
+      ansible.builtin.shell: |
+        pct list | awk 'NR>1 && $2 == "running" && ($NF == "{{ lxc_target }}" || $NF == "{{ lxc_target.split(".")[0] }}") {print $1; exit}'
+      register: _lxc_vmid
+      changed_when: false
+
+    - name: Shut down {{ lxc_target }} (VMID {{ _lxc_vmid.stdout | trim }})
+      ansible.builtin.command: pct shutdown {{ _lxc_vmid.stdout | trim }}
+      when: _lxc_vmid.stdout | trim | length > 0
+      changed_when: true
+
+    - name: Container not running — nothing to do
+      ansible.builtin.debug:
+        msg: "{{ lxc_target }} is not running on {{ inventory_hostname }}"
+      when: _lxc_vmid.stdout | trim | length == 0
