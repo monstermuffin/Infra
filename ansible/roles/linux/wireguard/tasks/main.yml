@@ -1,0 +1,46 @@
+---
+- name: Install WireGuard packages
+  ansible.builtin.apt:
+    name:
+      - wireguard
+      - wireguard-tools
+    state: present
+    update_cache: true
+  tags: [install, packages, wireguard]
+
+- name: Ensure /etc/wireguard directory exists
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  tags: [wireguard, config]
+
+- name: Deploy WireGuard interface configs
+  ansible.builtin.template:
+    src: wg.conf.j2
+    dest: /etc/wireguard/{{ iface_name }}.conf
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    iface: "{{ iface_item.value }}"
+    iface_name: "{{ iface_item.key }}"
+  loop: "{{ wireguard_interfaces | dict2items }}"
+  loop_control:
+    loop_var: iface_item
+    label: "{{ iface_item.key }}"
+  notify: Restart WireGuard interfaces
+  tags: [wireguard, config]
+
+- name: Enable and start wg-quick services
+  ansible.builtin.systemd:
+    name: wg-quick@{{ iface_item.key }}
+    state: started
+    enabled: true
+  loop: "{{ wireguard_interfaces | dict2items }}"
+  loop_control:
+    loop_var: iface_item
+    label: "{{ iface_item.key }}"
+  tags: [wireguard, service]

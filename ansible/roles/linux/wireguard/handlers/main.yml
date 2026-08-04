@@ -1,0 +1,9 @@
+---
+- name: Restart WireGuard interfaces
+  ansible.builtin.systemd:
+    name: wg-quick@{{ wg_item.key }}
+    state: restarted
+  loop: "{{ wireguard_interfaces | dict2items }}"
+  loop_control:
+    loop_var: wg_item
+    label: "{{ wg_item.key }}"

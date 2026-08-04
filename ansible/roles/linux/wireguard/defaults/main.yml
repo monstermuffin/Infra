@@ -1,0 +1,17 @@
+---
+# Dict of WireGuard interfaces keyed by interface name (e.g. wg0).
+# Each entry is passed directly to the wg.conf.j2 template.
+#
+# wireguard_interfaces:
+#   wg0:
+#     address: 192.168.92.149/32
+#     listen_port: 51820
+#     private_key: "{{ vault_wg_private_key }}"
+#     dns: "9.9.9.9, 149.112.112.112"
+#     peers:
+#       - public_key: "aBcD..."
+#         preshared_key: "{{ vault_wg_preshared_key }}"
+#         endpoint: "aah.muffn.io:51826"
+#         allowed_ips: "10.83.0.0/16, 10.82.0.0/16"
+#         persistent_keepalive: 5
+wireguard_interfaces: {}

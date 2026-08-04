@@ -1,0 +1,42 @@
+# {{ ansible_managed }}
+
+[Interface]
+Address = {{ iface.address }}
+PrivateKey = {{ iface.private_key }}
+{% if iface.listen_port is defined %}
+ListenPort = {{ iface.listen_port }}
+{% endif %}
+{% if iface.dns is defined %}
+DNS = {{ iface.dns }}
+{% endif %}
+{% if iface.table is defined %}
+Table = {{ iface.table }}
+{% endif %}
+{% if iface.pre_up is defined %}
+PreUp = {{ iface.pre_up }}
+{% endif %}
+{% if iface.post_up is defined %}
+PostUp = {{ iface.post_up }}
+{% endif %}
+{% if iface.pre_down is defined %}
+PreDown = {{ iface.pre_down }}
+{% endif %}
+{% if iface.post_down is defined %}
+PostDown = {{ iface.post_down }}
+{% endif %}
+
+{% for peer in iface.peers | default([]) %}
+[Peer]
+PublicKey = {{ peer.public_key }}
+{% if peer.preshared_key is defined %}
+PresharedKey = {{ peer.preshared_key }}
+{% endif %}
+AllowedIPs = {{ peer.allowed_ips }}
+{% if peer.endpoint is defined %}
+Endpoint = {{ peer.endpoint }}
+{% endif %}
+{% if peer.persistent_keepalive is defined %}
+PersistentKeepalive = {{ peer.persistent_keepalive }}
+{% endif %}
+
+{% endfor %}
