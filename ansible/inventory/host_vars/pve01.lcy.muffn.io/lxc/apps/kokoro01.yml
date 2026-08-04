@@ -1,0 +1,23 @@
+---
+pve_lxcs_kokoro01:
+  kokoro01:
+    vmid: 118
+    hostname: kokoro01.lcy.muffn.io
+    cores: 4
+    memory: 4096
+    swap: 512
+    disk: "20G"
+    network_ip: "10.83.7.118/24"
+    network_gw: "10.83.7.1"
+    network_vlan: 7
+    unprivileged: true
+    tags:
+      - ansible
+      - os_linux
+      - os_trixie
+      - site_lcy
+      - podman_app
+      - app_kokoro
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
