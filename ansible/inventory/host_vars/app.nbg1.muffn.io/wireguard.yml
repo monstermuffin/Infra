@@ -1,0 +1,13 @@
+---
+wireguard_interfaces:
+  wg0:
+    address: "{{ vault_wg_vps_address }}"
+    listen_port: 51820
+    private_key: "{{ vault_wg0_private_key }}"
+    dns: "9.9.9.9, 149.112.112.112"
+    peers:
+      - public_key: "0ByV1RURay9mohRRk0sVJrA+8S7vbxWRDnUNJm/YaDQ="
+        preshared_key: "{{ vault_wg0_preshared_key }}"
+        endpoint: "{{ vault_wg_aah_endpoint }}"
+        allowed_ips: "10.83.0.0/16, 10.82.0.0/16"
+        persistent_keepalive: 5

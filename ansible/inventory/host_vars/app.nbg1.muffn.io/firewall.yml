@@ -1,0 +1,33 @@
+---
+# Podman bridge networks need unrestricted access to the host (DNS via aardvark-dns, etc.)
+firewall_trusted_sources:
+  - 10.89.0.0/16  # Podman bridge networks
+
+# Used to scope forward-chain restrictions to inbound DNAT'd traffic only
+firewall_container_networks:
+  - 10.89.0.0/16
+
+firewall_allowed_tcp_ports:
+  - 22
+  - 8080  # UniFi inform§
+
+firewall_allowed_udp_ports:
+  - 51820
+  - 3478  # UniFi STUN
+
+firewall_restricted_tcp_ports:
+  - port: 443
+    sources:
+      - 10.82.0.0/16
+      - 10.83.0.0/16
+      - 100.64.0.0/10
+  - port: 8443
+    sources:
+      - 10.82.0.0/16
+      - 10.83.0.0/16
+      - 100.64.0.0/10
+  - port: 9100
+    sources:
+      - 10.82.0.0/16
+      - 10.83.0.0/16
+      - 100.64.0.0/10

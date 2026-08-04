@@ -16,6 +16,7 @@ podman_package_versions:
 podman_networks:
   labb0t: {}
   vps: {}
+  unifi: {}
 
 podman_apps:
 
@@ -175,6 +176,35 @@ podman_apps:
       DOZZLE_AUTH_HEADER_USER: Cf-Access-Authenticated-User-Email
       DOZZLE_AUTH_HEADER_EMAIL: Cf-Access-Authenticated-User-Email
       DOZZLE_AUTH_HEADER_NAME: Cf-Access-Authenticated-User-Email
+
+  unifios:
+    enabled: true
+    service_start: true
+    service_enable: true
+    image: ghcr.io/lemker/unifi-os-server
+    # renovate: datasource=docker depName=ghcr.io/lemker/unifi-os-server
+    tag: v1.4.0
+    description: UniFi OS Server
+    # Priv: UniFi OS runs systemd as PID 1 and needs CAP_SYS_ADMIN to mount tmpfs at /run on startup.
+    network: unifi
+    privileged: true
+    shm_size: 64m
+    ports:
+      - "443:443"
+      - "8080:8080"
+      - "3478:3478/udp"
+      - "8443:8443"
+    volumes:
+      - /opt/vps/unifi/persistent:/persistent
+      - /opt/vps/unifi/var-log:/var/log
+      - /opt/vps/unifi/data:/data
+      - /opt/vps/unifi/srv:/srv
+      - /opt/vps/unifi/var-lib-unifi:/var/lib/unifi
+      - /opt/vps/unifi/var-lib-mongodb:/var/lib/mongodb
+      - /opt/vps/unifi/etc-rabbitmq-ssl:/etc/rabbitmq/ssl
+    env:
+      UOS_SYSTEM_IP: "{{ vault_vps_public_ip }}"
+    startup_timeout: 120
 
   app-nbg1-cftun:
     enabled: true
