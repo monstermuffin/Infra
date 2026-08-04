@@ -1,0 +1,15 @@
+---
+podman_enabled: true
+
+podman_apps:
+  tubeless:
+    enabled: true
+    image: ghcr.io/communitymaintained/tubeless
+    # renovate: datasource=docker depName=ghcr.io/communitymaintained/tubeless
+    tag: 0.5.0
+    port: 8945
+    volumes:
+      - /opt/tubeless:/config
+      - /mnt/youtube:/downloads
+    env:
+      TZ: Europe/London
