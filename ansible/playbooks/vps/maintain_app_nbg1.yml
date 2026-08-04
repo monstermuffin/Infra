@@ -31,6 +31,16 @@
         name: linux/base
       tags: [base, setup]
 
+    - name: Firewall
+      ansible.builtin.include_role:
+        name: linux/firewall
+      tags: [firewall]
+
+    - name: WireGuard
+      ansible.builtin.include_role:
+        name: linux/wireguard
+      tags: [wireguard, wg]
+
     - name: Install Podman
       ansible.builtin.include_role:
         name: podman

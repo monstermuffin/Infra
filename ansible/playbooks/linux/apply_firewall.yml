@@ -1,0 +1,26 @@
+---
+# Apply nftables firewall rules to hosts that have firewall vars defined.
+# Safe to run against all hosts — skips any host with no firewall config.
+#
+# Target all firewall-managed hosts:
+#   ansible-playbook playbooks/linux/apply_firewall.yml
+#
+# Target a single host:
+#   ansible-playbook playbooks/linux/apply_firewall.yml --limit app.nbg1.muffn.io
+
+- name: Apply host firewall
+  hosts: "{{ target | default('all') }}"
+  gather_facts: false
+  become: true
+
+  pre_tasks:
+    - name: Skip host if no firewall configuration defined
+      ansible.builtin.meta: end_host
+      when:
+        - firewall_allowed_tcp_ports is not defined
+        - firewall_allowed_udp_ports is not defined
+        - firewall_restricted_tcp_ports is not defined
+        - firewall_restricted_udp_ports is not defined
+
+  roles:
+    - linux/firewall

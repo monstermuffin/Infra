@@ -1,0 +1,22 @@
+---
+# Apply WireGuard interface configuration to hosts that have wireguard vars defined.
+# Safe to run against all hosts — skips any host with no wireguard config.
+#
+# Target all wireguard-managed hosts:
+#   ansible-playbook playbooks/linux/apply_wireguard.yml
+#
+# Target a single host:
+#   ansible-playbook playbooks/linux/apply_wireguard.yml --limit app.nbg1.muffn.io
+
+- name: Apply host WireGuard
+  hosts: "{{ target | default('all') }}"
+  gather_facts: false
+  become: true
+
+  pre_tasks:
+    - name: Skip host if no WireGuard configuration defined
+      ansible.builtin.meta: end_host
+      when: wireguard_interfaces is not defined or (wireguard_interfaces | length) == 0
+
+  roles:
+    - linux/wireguard
