@@ -1,6 +1,9 @@
 ---
-# Apply nftables firewall rules to hosts that have firewall vars defined.
-# Safe to run against all hosts — skips any host with no firewall config.
+# Apply nftables firewall rules to hosts that explicitly opt in.
+#
+# To onboard a new host, set in its host_vars (or group_vars):
+#   firewall_enabled: true
+#   firewall_allowed_tcp_ports: [...]   # etc.
 #
 # Target all firewall-managed hosts:
 #   ansible-playbook playbooks/linux/apply_firewall.yml
@@ -14,13 +17,9 @@
   become: true
 
   pre_tasks:
-    - name: Skip host if no firewall configuration defined
+    - name: Skip host unless firewall_enabled is explicitly true
       ansible.builtin.meta: end_host
-      when:
-        - firewall_allowed_tcp_ports is not defined
-        - firewall_allowed_udp_ports is not defined
-        - firewall_restricted_tcp_ports is not defined
-        - firewall_restricted_udp_ports is not defined
+      when: not (firewall_enabled | bool)
 
   roles:
     - linux/firewall

@@ -1,4 +1,19 @@
 ---
+- name: Refuse to deploy a firewall with no allowed ports/sources
+  ansible.builtin.assert:
+    that: >-
+      (firewall_allowed_tcp_ports | default([]) | length) > 0
+      or (firewall_allowed_udp_ports | default([]) | length) > 0
+      or (firewall_restricted_tcp_ports | default([]) | length) > 0
+      or (firewall_restricted_udp_ports | default([]) | length) > 0
+      or (firewall_trusted_sources | default([]) | length) > 0
+    fail_msg: >-
+      firewall_enabled is true for {{ inventory_hostname }} but no ports or
+      trusted sources are configured. With firewall_input_policy=drop this
+      would reject ALL new inbound connections, including SSH. Refusing to
+      continue — set firewall_allowed_tcp_ports (at least SSH) before enabling.
+  tags: [always, firewall]
+
 - name: Install nftables
   ansible.builtin.apt:
     name: nftables

@@ -1,4 +1,6 @@
 ---
+firewall_enabled: true
+
 # Podman bridge networks need unrestricted access to the host (DNS via aardvark-dns, etc.)
 firewall_trusted_sources:
   - 10.89.0.0/16  # Podman bridge networks

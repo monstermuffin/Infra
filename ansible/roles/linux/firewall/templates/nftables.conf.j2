@@ -17,6 +17,9 @@ table inet filter {
         ct state invalid drop
         ct state { established, related } accept
 {% endif %}
+
+        # Always allowed, independent of firewall_allowed_tcp_ports
+        tcp dport {{ firewall_management_ssh_port }} accept comment "management SSH — always allowed"
 {% if firewall_trusted_sources %}
 
 {% for source in firewall_trusted_sources %}

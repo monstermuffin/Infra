@@ -1,4 +1,7 @@
 ---
+# Do not infer opt-in from other firewall_* vars being set/non-empty.
+firewall_enabled: false
+
 firewall_input_policy: drop
 firewall_forward_policy: accept
 firewall_output_policy: accept
@@ -6,6 +9,11 @@ firewall_output_policy: accept
 firewall_allow_loopback: true
 firewall_allow_established: true
 firewall_allow_icmp: true
+
+# Always accepted in the input chain, regardless of firewall_allowed_tcp_ports
+# — see the "management SSH" rule in templates/nftables.conf.j2. Change the
+# port if a host runs SSH elsewhere; do not remove the rule itself.
+firewall_management_ssh_port: 22
 
 # Source CIDRs that are fully trusted (e.g. container bridge networks needing
 # DNS/API access to the host). Traffic from these is accepted unconditionally.
