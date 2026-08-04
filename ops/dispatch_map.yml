@@ -10,6 +10,16 @@ rules:
   - pattern: "ansible/inventory/host_vars/app.nbg1.muffn.io/meta.yml"
     action: noop
 
+  - pattern: "ansible/inventory/host_vars/app.nbg1.muffn.io/firewall.yml"
+    playbook: "ansible/playbooks/linux/apply_firewall.yml"
+    limit: "app.nbg1.muffn.io"
+    tags: [firewall]
+
+  - pattern: "ansible/inventory/host_vars/app.nbg1.muffn.io/wireguard.yml"
+    playbook: "ansible/playbooks/linux/apply_wireguard.yml"
+    limit: "app.nbg1.muffn.io"
+    tags: [wireguard]
+
   - pattern: "ansible/inventory/host_vars/app.nbg1.muffn.io/labb0t.yml"
     playbook: "ansible/playbooks/vps/maintain_app_nbg1.yml"
     limit: "app.nbg1.muffn.io"
@@ -38,6 +48,15 @@ rules:
   # Guest-wide Linux policy overrides
   - pattern: "ansible/inventory/group_vars/linux_guests.yml"
     playbook: "ansible/playbooks/linux/manage.yml"
+
+  # Firewall/WireGuard role changes must precede generic linux/** catch-all.
+  - pattern: "ansible/roles/linux/firewall/**"
+    playbook: "ansible/playbooks/linux/apply_firewall.yml"
+    tags: [firewall]
+
+  - pattern: "ansible/roles/linux/wireguard/**"
+    playbook: "ansible/playbooks/linux/apply_wireguard.yml"
+    tags: [wireguard]
 
   # linux/base or compatibility shim changes — re-apply guest baseline
   - pattern: "ansible/roles/linux/**"
@@ -150,8 +169,35 @@ rules:
   - pattern: "ansible/inventory/host_vars/*/runner.yml"
     action: manual_notice
 
+  - pattern: "ansible/inventory/host_vars/*/firewall.yml"
+    playbook: "ansible/playbooks/linux/apply_firewall.yml"
+    tags: [firewall]
+
+  - pattern: "ansible/inventory/host_vars/*/wireguard.yml"
+    playbook: "ansible/playbooks/linux/apply_wireguard.yml"
+    tags: [wireguard]
+
   - pattern: "ansible/inventory/host_vars/*/meta.yml"
     action: noop
+
+  # Adding disabled.yml (lxc_disabled: true) shuts down the container and
+  # causes dispatch to skip all future playbooks targeting that host.
+  # Re-enable by deleting the file OR setting lxc_disabled: false — either
+  # triggers start_lxc.yml to bring the container back up if stopped.
+  - pattern: "ansible/inventory/host_vars/*/disabled.yml"
+    on_add:
+      playbook: "ansible/playbooks/lxc/stop_lxc.yml"
+      extra_vars:
+        lxc_target: "{host}"
+    on_change:
+      playbook: "ansible/playbooks/lxc/start_lxc.yml"
+      extra_vars:
+        lxc_target: "{host}"
+      condition: not_disabled
+    on_delete:
+      playbook: "ansible/playbooks/lxc/start_lxc.yml"
+      extra_vars:
+        lxc_target: "{host}"
 
   - pattern: "ansible/inventory/host_vars/*/linux.yml"
     action: host_linux

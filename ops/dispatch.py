@@ -20,6 +20,21 @@ _SafeLoader = yaml.SafeLoader
 yaml.add_multi_constructor("", lambda loader, tag, node: loader.construct_scalar(node), Loader=_SafeLoader)
 DISPATCH_MAP = REPO_ROOT / "ops" / "dispatch_map.yml"
 OUTPUT_SCRIPT = Path("/tmp/dispatch_cmds.sh")
+HOST_VARS_ROOT = REPO_ROOT / "ansible" / "inventory" / "host_vars"
+
+
+def _is_host_disabled(hostname: str) -> bool:
+    if not hostname:
+        return False
+    disabled_path = HOST_VARS_ROOT / hostname / "disabled.yml"
+    if not disabled_path.is_file():
+        return False
+    try:
+        with open(disabled_path) as f:
+            data = yaml.load(f, Loader=_SafeLoader) or {}
+        return bool(data.get("lxc_disabled", False))
+    except Exception:
+        return False
 
 
 @dataclass(frozen=True)
@@ -158,11 +173,34 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
     action = rule.get("action")
     priority = int(rule.get("priority", 10))
 
-    # Per-event action overrides (e.g. on_delete: noop skips dispatch when a file is removed)
+    # Per-event action overrides (e.g. on_delete: noop skips dispatch when a file is removed).
+    # The override value may be "noop" (skip) or a dict with playbook/extra_vars/tags (run instead).
     event_key = {"A": "on_add", "D": "on_delete"}.get(change_kind(status), "on_change")
     event_override = rule.get(event_key)
     if event_override == "noop":
         return []
+    if isinstance(event_override, dict):
+        ev_playbook = event_override.get("playbook")
+        if not ev_playbook:
+            return []
+        # condition: not_disabled — only dispatch if the host is no longer disabled.
+        # Works for both on_change (reads new file content) and on_delete (file gone → False).
+        if event_override.get("condition") == "not_disabled":
+            cond_limit = extract_limit(path, {})
+            if cond_limit and _is_host_disabled(cond_limit):
+                return []
+        ev_limit = extract_limit(path, event_override) if event_override.get("limit") else None
+        return [
+            _make_command(
+                ev_playbook,
+                path=path,
+                limit=ev_limit,
+                tags=event_override.get("tags"),
+                extra_vars=event_override.get("extra_vars"),
+                workdir=workdir,
+                priority=priority,
+            )
+        ]
 
     if action == "playbook_self":
         return [_make_command(path, path=path, workdir=workdir, priority=priority)]
@@ -173,6 +211,9 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
     if action == "host_linux":
         linux_playbook = "ansible/playbooks/linux/manage.yml"
         limit = extract_limit(path, {})
+        if limit and _is_host_disabled(limit):
+            print(f"  SKIPPED: {path} — {limit} is disabled (lxc_disabled)")
+            return []
         return [_make_command(linux_playbook, path=path, limit=limit, priority=priority)]
 
     if action == "host_self":
@@ -183,6 +224,11 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
         return []
 
     limit = extract_limit(path, rule)
+    # Skip disabled hosts for single-host targets.  Group/tag patterns will
+    # not match any meta.yml so _is_host_disabled returns False.
+    if limit and _is_host_disabled(limit):
+        print(f"  SKIPPED: {path} — {limit} is disabled (lxc_disabled)")
+        return []
     return [
         _make_command(
             playbook,
@@ -230,6 +276,12 @@ def _build_dispatch_commands(path: str, limit: str | None, dispatch_config: dict
 
 
 def _build_host_self_commands(path: str, status: str) -> list[CommandSpec]:
+    limit = extract_limit(path, {})
+
+    if limit and _is_host_disabled(limit):
+        print(f"  SKIPPED: {path} — {limit} is disabled (lxc_disabled)")
+        return []
+
     try:
         with open(REPO_ROOT / path) as f:
             host_vars = yaml.safe_load(f) or {}
@@ -237,7 +289,6 @@ def _build_host_self_commands(path: str, status: str) -> list[CommandSpec]:
         # File deleted — nothing to deploy
         return []
 
-    limit = extract_limit(path, {})
     commands = []
 
     custom_playbook = host_vars.get("dispatch_playbook")
