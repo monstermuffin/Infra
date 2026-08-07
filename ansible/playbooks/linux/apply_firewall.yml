@@ -20,6 +20,7 @@
     - name: Skip host unless firewall_enabled is explicitly true
       ansible.builtin.meta: end_host
       when: not (firewall_enabled | bool)
+      tags: [always]
 
   roles:
     - linux/firewall

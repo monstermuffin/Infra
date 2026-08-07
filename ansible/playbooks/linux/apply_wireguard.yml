@@ -17,6 +17,7 @@
     - name: Skip host if no WireGuard configuration defined
       ansible.builtin.meta: end_host
       when: wireguard_interfaces is not defined or (wireguard_interfaces | length) == 0
+      tags: [always]
 
   roles:
     - linux/wireguard
