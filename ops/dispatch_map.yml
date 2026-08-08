@@ -325,6 +325,13 @@ rules:
   - pattern: "ansible/inventory/group_vars/pi.yml"
     action: noop
 
+  # These playbooks require lxc_target extra var — never self-dispatch
+  - pattern: "ansible/playbooks/lxc/stop_lxc.yml"
+    action: noop
+
+  - pattern: "ansible/playbooks/lxc/start_lxc.yml"
+    action: noop
+
   # Changed playbook runs itself directly
   - pattern: "ansible/playbooks/**/*.yml"
     action: playbook_self

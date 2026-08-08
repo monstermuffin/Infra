@@ -8,6 +8,7 @@
 - name: Resolve Proxmox node for {{ lxc_target }}
   hosts: localhost
   gather_facts: false
+  become: false
 
   tasks:
     - name: Load meta.yml for {{ lxc_target }}
