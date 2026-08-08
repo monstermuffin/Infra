@@ -194,6 +194,7 @@ podman_apps:
       - "8080:8080"
       - "3478:3478/udp"
       - "8443:8443"
+      - "11443:11443"
     volumes:
       - /opt/vps/unifi/persistent:/persistent
       - /opt/vps/unifi/var-log:/var/log

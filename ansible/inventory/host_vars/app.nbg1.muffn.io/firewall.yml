@@ -11,7 +11,8 @@ firewall_container_networks:
 
 firewall_allowed_tcp_ports:
   - 22
-  - 8080  # UniFi inform§
+  - 8080   # UniFi inform
+  - 11443  # UniFi OS WebSockets
 
 firewall_allowed_udp_ports:
   - 51820
