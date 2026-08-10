@@ -1,0 +1,39 @@
+---
+- name: Check registered MCP servers
+  ansible.builtin.command:
+    cmd: "{{ ccagent_bin }} mcp list"
+  become: true
+  become_user: "{{ ccagent_user }}"
+  environment:
+    HOME: "{{ ccagent_home }}"
+  args:
+    chdir: "{{ ccagent_workdir }}"
+  register: _ccagent_mcp_list
+  changed_when: false
+  when: ccagent_ha_token | length > 0
+  tags: [mcp, configure]
+
+- name: Register Home Assistant MCP server
+  ansible.builtin.command:
+    cmd: >-
+      {{ ccagent_bin }} mcp add-json home-assistant
+      {{ {
+        'type': 'stdio',
+        'command': 'uvx',
+        'args': ['--python', '3.13', 'ha-mcp@latest'],
+        'env': {'HOMEASSISTANT_URL': ccagent_ha_url, 'HOMEASSISTANT_TOKEN': ccagent_ha_token}
+      } | to_json | quote }}
+      -s user
+  become: true
+  become_user: "{{ ccagent_user }}"
+  environment:
+    HOME: "{{ ccagent_home }}"
+  args:
+    chdir: "{{ ccagent_workdir }}"
+  when:
+    - ccagent_ha_token | length > 0
+    - "'home-assistant' not in _ccagent_mcp_list.stdout"
+  no_log: true
+  changed_when: true
+  notify: Restart ccagent remote-control service
+  tags: [mcp, configure]

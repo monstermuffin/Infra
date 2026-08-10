@@ -1,0 +1,19 @@
+[Unit]
+Description=CC-RC ({{ ccagent_user }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ ccagent_user }}
+Group={{ ccagent_user }}
+Environment=HOME={{ ccagent_home }}
+Environment=PATH={{ ccagent_home }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=-{{ ccagent_home }}/.env
+WorkingDirectory={{ ccagent_workdir }}
+ExecStart=/bin/sh -c 'echo y | exec {{ ccagent_bin }} remote-control --name "{{ ccagent_remote_control_name }}"{{ (' --spawn ' ~ ccagent_remote_control_spawn) if ccagent_remote_control_spawn | length > 0 else '' }}'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

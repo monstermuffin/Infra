@@ -1,0 +1,15 @@
+---
+# ansible-playbook playbooks/lxc/deploy_ccagent.yml
+# ansible-playbook playbooks/lxc/deploy_ccagent.yml --limit ccagent01.lcy.muffn.io
+# ansible-playbook playbooks/lxc/deploy_ccagent.yml --tags ccagent
+
+- name: Deploy ccagent
+  hosts: "{{ target | default('tag_app_ccagent') }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: linux/base
+      tags: [base, setup]
+    - role: apps/ccagent
+      tags: [ccagent, deploy]

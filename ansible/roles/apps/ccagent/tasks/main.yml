@@ -1,0 +1,44 @@
+---
+- name: Configure ccagent user and workspace
+  ansible.builtin.import_tasks: setup.yml
+  tags:
+    - user
+    - setup
+
+- name: Configure ccagent SSH access
+  ansible.builtin.import_tasks: ssh.yml
+  tags:
+    - ssh
+    - secrets
+    - configure
+
+- name: Configure ccagent secrets
+  ansible.builtin.import_tasks: secrets.yml
+  tags:
+    - secrets
+    - configure
+
+- name: Install ccagent dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags:
+    - install
+    - mcp
+
+- name: Configure ccagent MCP servers
+  ansible.builtin.import_tasks: mcp.yml
+  tags:
+    - mcp
+    - configure
+
+- name: Deploy ccagent CLAUDE.md
+  ansible.builtin.import_tasks: claude_md.yml
+  tags:
+    - claude-md
+    - configure
+
+- name: Manage ccagent remote-control service
+  ansible.builtin.import_tasks: service.yml
+  tags:
+    - service
+    - status
+    - configure

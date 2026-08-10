@@ -1,0 +1,30 @@
+---
+- name: Create ccagent .ssh directory
+  ansible.builtin.file:
+    path: "{{ ccagent_home }}/.ssh"
+    state: directory
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0700"
+  tags: [ssh, setup]
+
+- name: Write ccagent ansible SSH private key
+  ansible.builtin.copy:
+    content: "{{ ccagent_ansible_ssh_key }}"
+    dest: "{{ ccagent_ansible_ssh_key_dest }}"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0600"
+  no_log: true
+  when: ccagent_ansible_ssh_key | length > 0
+  tags: [ssh, secrets, configure]
+
+- name: Deploy ccagent SSH client config
+  ansible.builtin.template:
+    src: ssh_config.j2
+    dest: "{{ ccagent_home }}/.ssh/config"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0600"
+  when: ccagent_ansible_ssh_key | length > 0
+  tags: [ssh, configure]

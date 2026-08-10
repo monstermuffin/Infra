@@ -1,0 +1,10 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart ccagent remote-control service
+  ansible.builtin.systemd:
+    name: "{{ ccagent_service_name }}.service"
+    state: restarted
+  when: _ccagent_credentials_stat.stat.exists

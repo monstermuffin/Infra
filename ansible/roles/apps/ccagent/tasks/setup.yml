@@ -1,0 +1,18 @@
+---
+- name: Create ccagent system user
+  ansible.builtin.user:
+    name: "{{ ccagent_user }}"
+    home: "{{ ccagent_home }}"
+    shell: /bin/bash
+    system: true
+    create_home: true
+  tags: [user, setup]
+
+- name: Create ccagent workspace directory
+  ansible.builtin.file:
+    path: "{{ ccagent_workdir }}"
+    state: directory
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0750"
+  tags: [setup]

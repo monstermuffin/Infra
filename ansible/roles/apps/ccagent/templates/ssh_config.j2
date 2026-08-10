@@ -1,0 +1,5 @@
+Host {{ ccagent_ssh_config_hosts }}
+    User ansible
+    IdentityFile {{ ccagent_ansible_ssh_key_dest }}
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new

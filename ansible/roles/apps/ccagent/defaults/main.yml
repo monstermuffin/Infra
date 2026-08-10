@@ -1,0 +1,22 @@
+---
+ccagent_user: ccagent
+ccagent_home: /opt/ccagent
+ccagent_install_script_url: https://claude.ai/install.sh
+ccagent_bin: "{{ ccagent_home }}/.local/bin/claude"
+ccagent_workdir: "{{ ccagent_home }}/workspace"
+ccagent_service_name: ccagent-remote-control
+
+ccagent_remote_control_name: "{{ inventory_hostname.split('.')[0] }}"
+ccagent_remote_control_spawn: ""
+
+ccagent_ansible_ssh_key: ""
+ccagent_ansible_ssh_key_dest: "{{ ccagent_home }}/.ssh/ansible_ccagent"
+ccagent_ssh_config_hosts: "*.muffn.io"
+
+ccagent_git_crypt_key: ""
+
+ccagent_uv_install_script_url: https://astral.sh/uv/install.sh
+ccagent_uvx_bin: "{{ ccagent_home }}/.local/bin/uvx"
+
+ccagent_ha_url: ""
+ccagent_ha_token: ""

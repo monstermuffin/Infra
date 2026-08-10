@@ -1,0 +1,44 @@
+---
+- name: Check for existing claude.ai login credentials
+  ansible.builtin.stat:
+    path: "{{ ccagent_home }}/.claude/.credentials.json"
+  register: _ccagent_credentials_stat
+  tags: [service, status]
+
+- name: Deploy ccagent remote-control systemd unit
+  ansible.builtin.template:
+    src: ccagent-remote-control.service.j2
+    dest: "/etc/systemd/system/{{ ccagent_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd daemon
+    - Restart ccagent remote-control service
+  tags: [service, configure]
+
+- name: Enable ccagent remote-control service
+  ansible.builtin.systemd:
+    name: "{{ ccagent_service_name }}.service"
+    enabled: true
+    daemon_reload: true
+  tags: [service]
+
+- name: Start ccagent remote-control service
+  ansible.builtin.systemd:
+    name: "{{ ccagent_service_name }}.service"
+    state: started
+  when: _ccagent_credentials_stat.stat.exists
+  tags: [service]
+
+- name: Show one-time login instructions
+  ansible.builtin.debug:
+    msg: >-
+      No claude.ai credentials found at {{ ccagent_home }}/.claude/.credentials.json —
+      the service was deployed but not started. Log in once as {{ ccagent_user }},
+      then start it manually:
+        ssh {{ ansible_host | default(inventory_hostname) }}
+        sudo -u {{ ccagent_user }} -H {{ ccagent_bin }}
+        sudo systemctl start {{ ccagent_service_name }}
+  when: not _ccagent_credentials_stat.stat.exists
+  tags: [service, status]
