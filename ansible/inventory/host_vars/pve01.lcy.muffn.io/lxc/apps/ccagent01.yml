@@ -1,0 +1,21 @@
+---
+pve_lxcs_ccagent01:
+  ccagent01:
+    vmid: 119
+    hostname: ccagent01.lcy.muffn.io
+    cores: 2
+    memory: 2048
+    swap: 512
+    disk: "16G"
+    network_ip: "10.83.7.119/24"
+    network_gw: "10.83.7.1"
+    network_vlan: 7
+    unprivileged: true
+    tags:
+      - ansible
+      - os_linux
+      - os_trixie
+      - site_lcy
+      - app_ccagent
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"
