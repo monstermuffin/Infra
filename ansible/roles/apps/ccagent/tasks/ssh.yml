@@ -10,7 +10,7 @@
 
 - name: Write ccagent ansible SSH private key
   ansible.builtin.copy:
-    content: "{{ ccagent_ansible_ssh_key }}"
+    content: "{{ ccagent_ansible_ssh_key }}\n"
     dest: "{{ ccagent_ansible_ssh_key_dest }}"
     owner: "{{ ccagent_user }}"
     group: "{{ ccagent_user }}"
