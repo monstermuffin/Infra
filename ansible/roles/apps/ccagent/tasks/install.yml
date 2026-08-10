@@ -16,21 +16,3 @@
   when: not _ccagent_bin_stat.stat.exists
   changed_when: true
   tags: [install]
-
-- name: Check if uv is already installed
-  ansible.builtin.stat:
-    path: "{{ ccagent_uvx_bin }}"
-  register: _ccagent_uvx_stat
-  tags: [install, mcp]
-
-- name: Install uv
-  ansible.builtin.shell:
-    cmd: set -o pipefail && curl -LsSf {{ ccagent_uv_install_script_url }} | sh
-    executable: /bin/bash
-  become: true
-  become_user: "{{ ccagent_user }}"
-  environment:
-    HOME: "{{ ccagent_home }}"
-  when: not _ccagent_uvx_stat.stat.exists
-  changed_when: true
-  tags: [install, mcp]

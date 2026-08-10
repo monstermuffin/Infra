@@ -10,19 +10,14 @@
     chdir: "{{ ccagent_workdir }}"
   register: _ccagent_mcp_list
   changed_when: false
-  when: ccagent_ha_token | length > 0
+  when: ccagent_ha_mcp_url | length > 0
   tags: [mcp, configure]
 
-- name: Register Home Assistant MCP server
+- name: Register Home Assistant MCP server (HTTP)
   ansible.builtin.command:
     cmd: >-
-      {{ ccagent_bin }} mcp add-json home-assistant
-      {{ {
-        'type': 'stdio',
-        'command': 'uvx',
-        'args': ['--python', '3.13', 'ha-mcp@latest'],
-        'env': {'HOMEASSISTANT_URL': ccagent_ha_url, 'HOMEASSISTANT_TOKEN': ccagent_ha_token}
-      } | to_json | quote }}
+      {{ ccagent_bin }} mcp add --transport http home-assistant
+      {{ ccagent_ha_mcp_url }}
       -s user
   become: true
   become_user: "{{ ccagent_user }}"
@@ -31,8 +26,8 @@
   args:
     chdir: "{{ ccagent_workdir }}"
   when:
-    - ccagent_ha_token | length > 0
-    - "'home-assistant' not in _ccagent_mcp_list.stdout"
+    - ccagent_ha_mcp_url | length > 0
+    - "'home-assistant:' not in _ccagent_mcp_list.stdout"
   no_log: true
   changed_when: true
   notify: Restart ccagent remote-control service

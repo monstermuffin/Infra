@@ -15,8 +15,4 @@ ccagent_ssh_config_hosts: "*.muffn.io"
 
 ccagent_git_crypt_key: ""
 
-ccagent_uv_install_script_url: https://astral.sh/uv/install.sh
-ccagent_uvx_bin: "{{ ccagent_home }}/.local/bin/uvx"
-
-ccagent_ha_url: ""
-ccagent_ha_token: ""
+ccagent_ha_mcp_url: ""
