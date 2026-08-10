@@ -12,3 +12,6 @@ ansible/inventory/host_vars/app.nbg1.muffn.io/gatus.yml filter=git-crypt diff=gi
 # LabB0T
 ansible/inventory/host_vars/app.nbg1.muffn.io/labb0t.yml filter=git-crypt diff=git-crypt
 ansible/inventory/host_vars/app.nbg1.muffn.io/files/labb0t-config.yaml filter=git-crypt diff=git-crypt
+
+# ccagent
+ansible/roles/apps/ccagent/templates/CLAUDE.md.j2 filter=git-crypt diff=git-crypt
