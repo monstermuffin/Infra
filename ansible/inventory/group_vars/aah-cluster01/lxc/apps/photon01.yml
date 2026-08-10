@@ -1,0 +1,25 @@
+---
+pve_lxcs_photon01:
+  photon01:
+    vmid: 153
+    hostname: photon01.aah.muffn.io
+    node: pve04
+    cores: 4
+    memory: 20480
+    swap: 2048
+    disk: "220G"
+    storage: "local-zfs"
+    network_ip: "10.82.10.153/24"
+    network_gw: "10.82.10.1"
+    network_vlan: 710
+    unprivileged: true
+    tags:
+      - ansible
+      - os_linux
+      - os_trixie
+      - site_aah
+      - podman_app
+      - app_photon
+    features: "{{ lxc_features_podman }}"
+    ha: "{{ lxc_ha_default }}"
+    replication: "{{ lxc_replication_default }}"

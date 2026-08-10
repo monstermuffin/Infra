@@ -1,0 +1,169 @@
+---
+podman_enabled: true
+
+podman_networks:
+  dawarich: {}
+
+podman_apps:
+  dawarich-redis:
+    enabled: true
+    image: redis
+    # renovate: datasource=docker depName=redis versioning=regex:^(?<major>7)(\.(?<minor>\d+)(\.(?<patch>\d+))?)?(-.*)?$
+    tag: "7.4-alpine"
+    container_name: dawarich-redis
+    network: dawarich
+    volumes:
+      - /opt/dawarich/redis:/data
+
+  dawarich-db:
+    enabled: true
+    image: postgis/postgis
+    # renovate: datasource=docker depName=postgis/postgis versioning=regex:^(?<major>17)-(?<minor>3\.5)(-.*)?$
+    tag: "17-3.5-alpine"
+    container_name: dawarich-db
+    network: dawarich
+    shm_size: 1g
+    volumes:
+      - /opt/dawarich/postgres:/var/lib/postgresql/data
+    env:
+      POSTGRES_USER: dawarich
+      POSTGRES_PASSWORD: "{{ dawarich_db_password | trim }}"
+      POSTGRES_DB: dawarich_production
+
+  dawarich-app:
+    enabled: true
+    image: freikin/dawarich
+    # renovate: datasource=docker depName=freikin/dawarich
+    tag: "1.11.0"
+    container_name: dawarich-app
+    port: 3000
+    network: dawarich
+    startup_timeout: 120
+    after:
+      - dawarich-db.service
+      - dawarich-redis.service
+    requires:
+      - dawarich-db.service
+      - dawarich-redis.service
+    volumes:
+      - /opt/dawarich/public:/var/app/public
+      - /opt/dawarich/watched:/var/app/tmp/imports/watched
+      - /opt/dawarich/storage:/var/app/storage
+    podman_args:
+      - "--entrypoint=/usr/local/bin/web-entrypoint.sh"
+    exec: "bin/rails server -p 3000 -b ::"
+    env:
+      RAILS_ENV: production
+      REDIS_URL: redis://dawarich-redis:6379
+      DATABASE_HOST: dawarich-db
+      DATABASE_PORT: "5432"
+      DATABASE_USERNAME: dawarich
+      DATABASE_PASSWORD: "{{ dawarich_db_password | trim }}"
+      DATABASE_NAME: dawarich_production
+      APPLICATION_HOSTS: "{{ dawarich_domain | trim }}"
+      APPLICATION_PROTOCOL: https
+      TIME_ZONE: Europe/London
+      SECRET_KEY_BASE: "{{ dawarich_secret_key_base | trim }}"
+      RAILS_LOG_TO_STDOUT: "true"
+      SELF_HOSTED: "true"
+      STORE_GEODATA: "true"
+      WEB_CONCURRENCY: "1"
+      PHOTON_API_HOST: "10.82.10.153:2322"
+      PHOTON_API_USE_HTTPS: "false"
+      OIDC_CLIENT_ID: "{{ dawarich_oidc_client_id | trim }}"
+      OIDC_CLIENT_SECRET: "{{ dawarich_oidc_client_secret | trim }}"
+      OIDC_ISSUER: https://id.muffn.io
+      OIDC_PROVIDER_NAME: Pocket ID
+      OIDC_PKCE_ENABLED: "true"
+      OIDC_REDIRECT_URI: "https://{{ dawarich_domain | trim }}/users/auth/openid_connect/callback"
+      ALLOW_EMAIL_PASSWORD_LOGIN: "false"
+
+  dawarich-sidekiq:
+    enabled: true
+    image: freikin/dawarich
+    # renovate: datasource=docker depName=freikin/dawarich
+    tag: "1.11.0"
+    container_name: dawarich-sidekiq
+    network: dawarich
+    podman_args:
+      - "--entrypoint=/usr/local/bin/sidekiq-entrypoint.sh"
+    exec: sidekiq
+    after:
+      - dawarich-db.service
+      - dawarich-redis.service
+      - dawarich-app.service
+    requires:
+      - dawarich-db.service
+      - dawarich-redis.service
+    volumes:
+      - /opt/dawarich/public:/var/app/public
+      - /opt/dawarich/watched:/var/app/tmp/imports/watched
+      - /opt/dawarich/storage:/var/app/storage
+    env:
+      RAILS_ENV: production
+      REDIS_URL: redis://dawarich-redis:6379
+      DATABASE_HOST: dawarich-db
+      DATABASE_PORT: "5432"
+      DATABASE_USERNAME: dawarich
+      DATABASE_PASSWORD: "{{ dawarich_db_password | trim }}"
+      DATABASE_NAME: dawarich_production
+      APPLICATION_HOSTS: "{{ dawarich_domain | trim }}"
+      APPLICATION_PROTOCOL: https
+      TIME_ZONE: Europe/London
+      SECRET_KEY_BASE: "{{ dawarich_secret_key_base | trim }}"
+      RAILS_LOG_TO_STDOUT: "true"
+      SELF_HOSTED: "true"
+      STORE_GEODATA: "true"
+      BACKGROUND_PROCESSING_CONCURRENCY: "3"
+      PHOTON_API_HOST: "10.82.10.153:2322"
+      PHOTON_API_USE_HTTPS: "false"
+
+dawarich_domain: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66633238366438376161646433323462383238653732663036633731393938306436613036363736
+          3738376566393436326131396561393865616463313130630a383730353863363030396236356664
+          39343135653264656464393965343334303030373532646564653038623630356131333061333331
+          6536336461396631340a343365633734373639326664623331653864353238323330346534643435
+          6430
+
+dawarich_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66653034373036343636333032623930333733383064346639323739626239333066306135306566
+          3166326639356437613666363138633864303631623630620a663966663233353236316365343861
+          34366436663231366235396337666666623863396536383336343832306330383635643935346530
+          3866613261633338610a393431386330383133353436393931333364663339373630383133383437
+          31623762656235663238303531336562386334633563623034613938393163393339646530393661
+          30383161613237333938653261396333376337376330386162366366313163396634623365643666
+          356631323062396231633563303633666538
+
+dawarich_secret_key_base: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61663131316266643434623034343366313531656237366334646637336130396437643365303637
+          3332306536393936343363333062656662646335353566390a643635643939633462356639386339
+          34336162373935366431373030666164633964623366623330393739393738666639623664376135
+          6136383339303035370a303039356666626638663735396336323832383264636662326230663266
+          33356337623038383232306438326139303635326535666337643730323931303862333533353465
+          39303730363465643635323861373630643734626432346561333336353033636262363765306137
+          65623235653638633963326439613362663365323736663538656530643637623266363762343837
+          36346132386530376161313039393965653938363337306434623435303462336664333565653039
+          61653739636662316631343035353439333837336539393338343639336132653336326334633231
+          33646564623565633239316639613837323666306163633363643363636162363033343635353332
+          626231303964336530393132613039326531
+
+dawarich_oidc_client_id: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64646134323934303062643834306231383561663730353138376538343731653661386134316230
+          3664346163633631643363376665633164313763346438630a396562376339326336333039666262
+          63303333616237626531313234326637363462643062663935356462643438303836646338373764
+          3736343232326235620a636530396538663033343633393839646231616162336339383730616634
+          66313632633136393732623133356361306131313364653930623137623732313136306635353166
+          3233343434623339633764666439643062336134346135363531
+
+dawarich_oidc_client_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37316637353335313461616666383866333861323865386632396266663136613665633162396161
+          3861623435393437633733363837663266373336316364330a353263366165363431313962656562
+          37336233646161326233646635663231653334633535373063393834303966326162636361313862
+          3364356537366235350a373561653033333361306365373861636437666366396532623230363465
+          66623832646135656662356164373833323037303132653966336264313239336163353037376339
+          6563333739653731666330656432646166366431663561613839

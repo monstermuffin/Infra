@@ -1,0 +1,21 @@
+---
+podman_enabled: true
+
+podman_apps:
+  photon:
+    enabled: true
+    image: docker.io/rtuszik/photon-docker
+    # renovate: datasource=docker depName=rtuszik/photon-docker
+    tag: "2.3.1"
+    container_name: photon
+    port: 2322
+    startup_timeout: 120
+    volumes:
+      - /opt/photon/data:/photon/data
+    env:
+      REGION: planet
+      IMPORT_MODE: db
+      UPDATE_STRATEGY: PARALLEL
+      UPDATE_INTERVAL: 720h
+      JAVA_PARAMS: "-Xmx16g"
+      TZ: Europe/London
