@@ -1,0 +1,87 @@
+{
+  "mcpServers": {
+    "proxmox-lcy-pve01": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["proxmox-mcp-server"],
+      "env": {
+        "PROXMOX_HOST": "pve01.lcy.muffn.io",
+        "PROXMOX_PORT": "8006",
+        "PROXMOX_USER": "ccagent@pve",
+        "PROXMOX_TOKEN_NAME": "ccagent",
+        "PROXMOX_TOKEN_VALUE": "{{ mcphub_proxmox_token_lcy }}",
+        "PROXMOX_VERIFY_SSL": "false",
+        "PROXMOX_READ_ONLY": "false"
+      }
+    },
+    "proxmox-aah-pve02": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["proxmox-mcp-server"],
+      "env": {
+        "PROXMOX_HOST": "pve02.aah.muffn.io",
+        "PROXMOX_PORT": "8006",
+        "PROXMOX_USER": "ccagent@pve",
+        "PROXMOX_TOKEN_NAME": "ccagent",
+        "PROXMOX_TOKEN_VALUE": "{{ mcphub_proxmox_token_aah_pve02 }}",
+        "PROXMOX_VERIFY_SSL": "false",
+        "PROXMOX_READ_ONLY": "false"
+      }
+    },
+    "proxmox-aah-pve03": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["proxmox-mcp-server"],
+      "env": {
+        "PROXMOX_HOST": "pve03.aah.muffn.io",
+        "PROXMOX_PORT": "8006",
+        "PROXMOX_USER": "ccagent@pve",
+        "PROXMOX_TOKEN_NAME": "ccagent",
+        "PROXMOX_TOKEN_VALUE": "{{ mcphub_proxmox_token_aah }}",
+        "PROXMOX_VERIFY_SSL": "false",
+        "PROXMOX_READ_ONLY": "false"
+      }
+    },
+    "proxmox-aah-pve04": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["proxmox-mcp-server"],
+      "env": {
+        "PROXMOX_HOST": "pve04.aah.muffn.io",
+        "PROXMOX_PORT": "8006",
+        "PROXMOX_USER": "ccagent@pve",
+        "PROXMOX_TOKEN_NAME": "ccagent",
+        "PROXMOX_TOKEN_VALUE": "{{ mcphub_proxmox_token_aah }}",
+        "PROXMOX_VERIFY_SSL": "false",
+        "PROXMOX_READ_ONLY": "false"
+      }
+    },
+    "home-assistant": {
+      "type": "streamable-http",
+      "url": "{{ mcphub_ha_mcp_url }}",
+      "owner": "admin"
+    }
+  },
+  "bearerKeys": [
+    {
+      "id": "aa19baac-2f6b-494a-a182-151a6e7ea021",
+      "name": "ccagent",
+      "token": "{{ mcphub_bearer_key_ccagent }}",
+      "enabled": true,
+      "kind": "system",
+      "accessType": "all",
+      "allowedGroups": [],
+      "allowedServers": []
+    },
+    {
+      "id": "f6c5c95e-186a-42e9-85c6-0996ee673178",
+      "name": "claude-desktop",
+      "token": "{{ mcphub_bearer_key_claude_desktop }}",
+      "enabled": true,
+      "kind": "system",
+      "accessType": "all",
+      "allowedGroups": [],
+      "allowedServers": []
+    }
+  ]
+}

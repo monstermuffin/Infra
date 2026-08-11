@@ -10,15 +10,16 @@
     chdir: "{{ ccagent_workdir }}"
   register: _ccagent_mcp_list
   changed_when: false
-  when: ccagent_ha_mcp_url | length > 0
+  when: ccagent_mcphub_url | length > 0
   tags: [mcp, configure]
 
-- name: Register Home Assistant MCP server (HTTP)
+- name: Remove existing mcphub MCP server
   ansible.builtin.command:
-    cmd: >-
-      {{ ccagent_bin }} mcp add --transport http home-assistant
-      {{ ccagent_ha_mcp_url }}
-      -s user
+    argv:
+      - "{{ ccagent_bin }}"
+      - mcp
+      - remove
+      - mcphub
   become: true
   become_user: "{{ ccagent_user }}"
   environment:
@@ -26,8 +27,33 @@
   args:
     chdir: "{{ ccagent_workdir }}"
   when:
-    - ccagent_ha_mcp_url | length > 0
-    - "'home-assistant:' not in _ccagent_mcp_list.stdout"
+    - ccagent_mcp_force_register | default(false) | bool
+    - "'mcphub:' in _ccagent_mcp_list.stdout"
+  changed_when: true
+  failed_when: false
+  tags: [mcp, configure]
+
+- name: Register mcphub MCP server
+  ansible.builtin.command:
+    argv:
+      - "{{ ccagent_bin }}"
+      - mcp
+      - add
+      - --transport
+      - http
+      - mcphub
+      - "{{ ccagent_mcphub_url }}"
+      - -H
+      - "Authorization: Bearer {{ ccagent_mcphub_bearer_key }}"
+      - -s
+      - user
+  become: true
+  become_user: "{{ ccagent_user }}"
+  environment:
+    HOME: "{{ ccagent_home }}"
+  args:
+    chdir: "{{ ccagent_workdir }}"
+  when: "'mcphub:' not in _ccagent_mcp_list.stdout"
   no_log: true
   changed_when: true
   notify: Restart ccagent remote-control service

@@ -15,4 +15,7 @@ ccagent_ssh_config_hosts: "*.muffn.io"
 
 ccagent_git_crypt_key: ""
 
-ccagent_ha_mcp_url: ""
+ccagent_mcphub_url: ""
+ccagent_mcphub_bearer_key: ""
+
+ccagent_mcp_force_register: false
