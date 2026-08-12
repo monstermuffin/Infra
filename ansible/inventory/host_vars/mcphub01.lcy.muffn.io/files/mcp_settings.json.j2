@@ -60,6 +60,11 @@
       "type": "streamable-http",
       "url": "{{ mcphub_ha_mcp_url }}",
       "owner": "admin"
+    },
+    "fli": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "flights[mcp]", "fli-mcp"]
     }
   },
   "bearerKeys": [
