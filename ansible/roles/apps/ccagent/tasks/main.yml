@@ -18,6 +18,13 @@
     - secrets
     - configure
 
+- name: Configure ccagent castellan-bot access
+  ansible.builtin.import_tasks: github_app.yml
+  tags:
+    - github
+    - secrets
+    - configure
+
 - name: Install ccagent dependencies
   ansible.builtin.import_tasks: install.yml
   tags:

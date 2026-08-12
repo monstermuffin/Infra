@@ -15,6 +15,12 @@ ccagent_ssh_config_hosts: "*.muffn.io"
 
 ccagent_git_crypt_key: ""
 
+ccagent_github_app_id: ""
+ccagent_github_app_installation_id: ""
+ccagent_github_app_slug: ""
+ccagent_github_app_user_id: ""
+ccagent_github_app_private_key: ""
+
 ccagent_mcphub_url: ""
 ccagent_mcphub_bearer_key: ""
 

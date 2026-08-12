@@ -1,0 +1,64 @@
+---
+- name: Create ccagent castellan-bot directory
+  ansible.builtin.file:
+    path: "{{ ccagent_home }}/.github-app"
+    state: directory
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0700"
+  when: ccagent_github_app_private_key | length > 0
+  tags: [github, secrets, configure]
+
+- name: Write castellan-bot private key
+  ansible.builtin.copy:
+    content: "{{ ccagent_github_app_private_key }}\n"
+    dest: "{{ ccagent_home }}/.github-app/private-key.pem"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0600"
+  no_log: true
+  when: ccagent_github_app_private_key | length > 0
+  tags: [github, secrets, configure]
+
+- name: Deploy castellan-bot token helper
+  ansible.builtin.copy:
+    src: github-app-token.py
+    dest: "{{ ccagent_home }}/.local/bin/github-app-token.py"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0750"
+  when: ccagent_github_app_private_key | length > 0
+  tags: [github, configure]
+
+- name: Deploy git credential helper for castellan-bot
+  ansible.builtin.copy:
+    src: git-credential-github-app
+    dest: "{{ ccagent_home }}/.local/bin/git-credential-github-app"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0750"
+  when: ccagent_github_app_private_key | length > 0
+  tags: [github, configure]
+
+- name: Configure git identity and credential helper for castellan-bot
+  community.general.git_config:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    scope: global
+  become: true
+  become_user: "{{ ccagent_user }}"
+  environment:
+    HOME: "{{ ccagent_home }}"
+  loop:
+    - name: user.name
+      value: "{{ ccagent_github_app_slug }}[bot]"
+    - name: user.email
+      value: "{{ ccagent_github_app_user_id }}+{{ ccagent_github_app_slug }}[bot]@users.noreply.github.com"
+    - name: credential.https://github.com.helper
+      value: "!{{ ccagent_home }}/.local/bin/git-credential-github-app"
+    - name: credential.https://github.com.useHttpPath
+      value: "false"
+  loop_control:
+    label: "{{ item.name }}"
+  when: ccagent_github_app_private_key | length > 0
+  tags: [github, configure]
