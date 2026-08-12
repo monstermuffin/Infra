@@ -82,10 +82,7 @@
 
 - name: Set Starship architecture
   ansible.builtin.set_fact:
-    _linux_base_starship_arch: >-
-      {%- if ansible_architecture == 'x86_64' -%}x86_64-unknown-linux-musl
-      {%- elif ansible_architecture == 'aarch64' -%}aarch64-unknown-linux-musl
-      {%- else -%}unknown{%- endif -%}
+    _linux_base_starship_arch: "{{ {'x86_64': 'x86_64-unknown-linux-musl', 'aarch64': 'aarch64-unknown-linux-musl'}.get(ansible_architecture, 'unknown') }}"
   tags:
     - shell
     - starship

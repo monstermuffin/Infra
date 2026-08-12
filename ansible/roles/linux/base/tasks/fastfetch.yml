@@ -30,10 +30,7 @@
 
 - name: Set fastfetch architecture
   ansible.builtin.set_fact:
-    _linux_base_fastfetch_arch: >-
-      {%- if ansible_architecture == 'x86_64' -%}amd64
-      {%- elif ansible_architecture == 'aarch64' -%}aarch64
-      {%- else -%}unknown{%- endif -%}
+    _linux_base_fastfetch_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'aarch64'}.get(ansible_architecture, 'unknown') }}"
   tags: fastfetch
 
 - name: Fail if architecture is unsupported

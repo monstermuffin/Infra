@@ -26,6 +26,7 @@ inventories/inventory.yml
 !*.example.yml
 !*.example
 !CLAUDE.md.j2
+!claude_md.yml
 scripts/tf-env.sh
 ansible/roles/apps/podman/frigate
 ansible/roles/apps/docker/frigate

@@ -1,0 +1,19 @@
+---
+- name: Create ccagent .claude directory
+  ansible.builtin.file:
+    path: "{{ ccagent_home }}/.claude"
+    state: directory
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0755"
+  tags: [claude-md, configure]
+
+- name: Deploy global CLAUDE.md
+  ansible.builtin.template:
+    src: CLAUDE.md.j2
+    dest: "{{ ccagent_home }}/.claude/CLAUDE.md"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0644"
+  notify: Restart ccagent remote-control service
+  tags: [claude-md, configure]
