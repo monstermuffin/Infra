@@ -11,6 +11,7 @@
   hosts: "{{ pdm_host | default('tag_app_pdm') }}"
   become: true
   gather_facts: true
+  ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
 
   roles:
     - role: linux/base

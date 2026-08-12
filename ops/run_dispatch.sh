@@ -137,7 +137,7 @@ run_vm_bootstrap() {
     mkdir -p /tmp/ansible-cp
     ANSIBLE_LOCAL_TEMP=/tmp \
     ANSIBLE_SSH_CONTROL_PATH_DIR=/tmp/ansible-cp \
-    ansible-playbook playbooks/linux/manage.yml -e target="$vm_limit" --limit "$vm_limit"
+    ansible-playbook playbooks/linux/manage.yml -e target="$vm_limit" -e dispatch_fail_offline=true --limit "$vm_limit"
   )
 }
 

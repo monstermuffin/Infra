@@ -3,6 +3,7 @@
   hosts: ntfy01.aah.muffn.io
   become: true
   gather_facts: true
+  ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
 
   tasks:
     - name: Deploy ntfy container

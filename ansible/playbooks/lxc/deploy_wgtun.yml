@@ -3,6 +3,7 @@
   hosts: "{{ target | default('wgtun01.aah.muffn.io') }}"
   become: true
   gather_facts: true
+  ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
 
   roles:
     - role: linux/base

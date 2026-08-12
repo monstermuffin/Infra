@@ -37,6 +37,13 @@ def _is_host_disabled(hostname: str) -> bool:
         return False
 
 
+def _is_direct_host_target(limit: str | None) -> bool:
+    """True when --limit is a single inventory host, not a group or pattern."""
+    if not limit or any(sep in limit for sep in ",:&"):
+        return False
+    return (HOST_VARS_ROOT / limit).is_dir() or (HOST_VARS_ROOT / f"{limit}.yml").is_file()
+
+
 @dataclass(frozen=True)
 class CommandSpec:
     workdir: Path
@@ -154,9 +161,14 @@ def _make_command(
 ) -> CommandSpec:
     command_workdir = workdir or get_workdir({"playbook": playbook}, path)
     command_tags = tuple(tags or ())
+    extra_items = dict(extra_vars or {})
+    # Host-scoped changes must fail if that guest is offline. Group/fleet
+    # plays skip unreachable guests instead of failing the whole dispatch.
+    if _is_direct_host_target(limit):
+        extra_items.setdefault("dispatch_fail_offline", "true")
     expanded_extra_vars = tuple(
         (key, _expand_template(val, path))
-        for key, val in (extra_vars or {}).items()
+        for key, val in extra_items.items()
     )
     return CommandSpec(
         workdir=command_workdir,
@@ -214,7 +226,8 @@ def build_command(rule: dict, path: str, status: str) -> list[CommandSpec]:
         if limit and _is_host_disabled(limit):
             print(f"  SKIPPED: {path} — {limit} is disabled (lxc_disabled)")
             return []
-        return [_make_command(linux_playbook, path=path, limit=limit, priority=priority)]
+        extra_vars = {"target": limit} if limit else None
+        return [_make_command(linux_playbook, path=path, limit=limit, extra_vars=extra_vars, priority=priority)]
 
     if action == "host_self":
         return _build_host_self_commands(path, status)

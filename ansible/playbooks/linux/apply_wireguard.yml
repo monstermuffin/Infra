@@ -11,6 +11,7 @@
 - name: Apply host WireGuard
   hosts: "{{ target | default('all') }}"
   gather_facts: false
+  ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
   become: true
 
   pre_tasks:

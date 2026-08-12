@@ -7,10 +7,13 @@
 - name: Manage Linux guests
   hosts: "{{ target | default('linux_guests:&proxmox_all_running') }}"
   gather_facts: false
+  # dispatch_fail_offline=true so a targeted guest being down fails the run.
+  ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
   vars:
     ansible_user: "{{ linux_manage_user | default('ansible') }}"
     linux_manage_is_qemu_guest: "{{ proxmox_vmtype | default('') == 'qemu' }}"
     linux_base_manage_qemu_guest_agent: "{{ linux_manage_is_qemu_guest }}"
+    linux_manage_require_online: "{{ dispatch_fail_offline | default(false) | bool }}"
   become: true
 
   pre_tasks:
@@ -18,6 +21,7 @@
       ansible.builtin.wait_for_connection:
         sleep: 5
         timeout: "{{ linux_manage_wait_for_connection_timeout | default(300) }}"
+      when: linux_manage_require_online | bool
 
     - name: Check if cloud-init is installed
       ansible.builtin.stat:
