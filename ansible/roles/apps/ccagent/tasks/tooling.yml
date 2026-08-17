@@ -1,0 +1,108 @@
+---
+- name: Install ccagent tooling system dependencies
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - python3
+      - python3-venv
+      - pipx
+    state: present
+    update_cache: true
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install ansible-core via pipx as ccagent user
+  ansible.builtin.command:
+    cmd: pipx install --include-deps ansible
+    creates: "{{ ccagent_home }}/.local/bin/ansible"
+  become: true
+  become_user: "{{ ccagent_user }}"
+  environment:
+    HOME: "{{ ccagent_home }}"
+    PIPX_HOME: "{{ ccagent_home }}/.local/pipx"
+    PIPX_BIN_DIR: "{{ ccagent_home }}/.local/bin"
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /usr/share/keyrings/hashicorp-archive-keyring.asc
+    mode: "0644"
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.asc] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    filename: hashicorp
+    state: present
+    update_cache: true
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install Terraform CLI
+  ansible.builtin.apt:
+    name: terraform
+    state: present
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install NodeSource apt signing key
+  ansible.builtin.get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /usr/share/keyrings/nodesource.asc
+    mode: "0644"
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Add NodeSource apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nodesource.asc] https://deb.nodesource.com/node_22.x nodistro main"
+    filename: nodesource
+    state: present
+    update_cache: true
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install wrangler globally via npm
+  community.general.npm:
+    name: wrangler
+    global: true
+    state: present
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install Infisical apt signing key
+  ansible.builtin.get_url:
+    url: https://artifacts-cli.infisical.com/infisical.gpg
+    dest: /usr/share/keyrings/infisical-archive-keyring.asc
+    mode: "0644"
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Add Infisical apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/infisical-archive-keyring.asc] https://artifacts-cli.infisical.com/deb stable main"
+    filename: infisical
+    state: present
+    update_cache: true
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Install Infisical CLI
+  ansible.builtin.apt:
+    name: infisical
+    state: present
+    update_cache: true
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]

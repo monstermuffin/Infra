@@ -6,7 +6,9 @@
     owner: "{{ ccagent_user }}"
     group: "{{ ccagent_user }}"
     mode: "0700"
-  when: ccagent_github_app_private_key | length > 0
+  when:
+    - not (ccagent_infisical_enabled | bool)
+    - ccagent_github_app_private_key | length > 0
   tags: [github, secrets, configure]
 
 - name: Write castellan-bot private key
@@ -17,7 +19,9 @@
     group: "{{ ccagent_user }}"
     mode: "0600"
   no_log: true
-  when: ccagent_github_app_private_key | length > 0
+  when:
+    - not (ccagent_infisical_enabled | bool)
+    - ccagent_github_app_private_key | length > 0
   tags: [github, secrets, configure]
 
 - name: Deploy castellan-bot token helper
@@ -27,7 +31,7 @@
     owner: "{{ ccagent_user }}"
     group: "{{ ccagent_user }}"
     mode: "0750"
-  when: ccagent_github_app_private_key | length > 0
+  when: (ccagent_infisical_enabled | bool) or (ccagent_github_app_private_key | length > 0)
   tags: [github, configure]
 
 - name: Deploy git credential helper for castellan-bot
@@ -37,7 +41,7 @@
     owner: "{{ ccagent_user }}"
     group: "{{ ccagent_user }}"
     mode: "0750"
-  when: ccagent_github_app_private_key | length > 0
+  when: (ccagent_infisical_enabled | bool) or (ccagent_github_app_private_key | length > 0)
   tags: [github, configure]
 
 - name: Configure git identity and credential helper for castellan-bot
@@ -60,5 +64,5 @@
       value: "false"
   loop_control:
     label: "{{ item.name }}"
-  when: ccagent_github_app_private_key | length > 0
+  when: (ccagent_infisical_enabled | bool) or (ccagent_github_app_private_key | length > 0)
   tags: [github, configure]

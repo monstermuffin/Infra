@@ -1,0 +1,14 @@
+---
+- name: Deploy Infisical helper scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ ccagent_home }}/.local/bin/{{ item }}"
+    owner: "{{ ccagent_user }}"
+    group: "{{ ccagent_user }}"
+    mode: "0750"
+  loop:
+    - ccagent-fetch-secrets.sh
+    - infisical-vault-password.sh
+    - infisical-run
+  when: ccagent_infisical_enabled | bool
+  tags: [infisical, configure]

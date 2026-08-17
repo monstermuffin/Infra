@@ -12,6 +12,12 @@
     - secrets
     - configure
 
+- name: Configure ccagent Infisical helper scripts
+  ansible.builtin.import_tasks: infisical.yml
+  tags:
+    - infisical
+    - configure
+
 - name: Configure ccagent secrets
   ansible.builtin.import_tasks: secrets.yml
   tags:
@@ -30,6 +36,12 @@
   tags:
     - install
     - mcp
+
+- name: Install ccagent autonomous-operation tooling
+  ansible.builtin.import_tasks: tooling.yml
+  tags:
+    - tooling
+    - install
 
 - name: Configure ccagent MCP servers
   ansible.builtin.import_tasks: mcp.yml

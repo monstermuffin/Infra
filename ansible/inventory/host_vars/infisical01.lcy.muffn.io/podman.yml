@@ -1,0 +1,81 @@
+---
+podman_enabled: true
+
+podman_networks:
+  infisical: {}
+
+podman_apps:
+  infisical-redis:
+    enabled: true
+    image: redis
+    tag: "7-alpine"
+    container_name: infisical-redis
+    network: infisical
+    volumes:
+      - /opt/infisical/redis:/data
+
+  infisical-db:
+    enabled: true
+    image: postgres
+    tag: "16-alpine"
+    container_name: infisical-db
+    network: infisical
+    volumes:
+      - /opt/infisical/postgres:/var/lib/postgresql/data
+    env:
+      POSTGRES_USER: infisical
+      POSTGRES_PASSWORD: "{{ infisical_db_password | trim }}"
+      POSTGRES_DB: infisical
+
+  infisical-app:
+    enabled: true
+    image: infisical/infisical
+    tag: "v0.162.19"
+    container_name: infisical-app
+    port: 8080
+    network: infisical
+    startup_timeout: 90
+    after:
+      - infisical-db.service
+      - infisical-redis.service
+    requires:
+      - infisical-db.service
+      - infisical-redis.service
+    env:
+      NODE_ENV: production
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      SITE_URL: "http://infisical01.lcy.muffn.io:8080"
+      ENCRYPTION_KEY: "{{ infisical_encryption_key | trim }}"
+      AUTH_SECRET: "{{ infisical_auth_secret | trim }}"
+      DB_CONNECTION_URI: "postgresql://infisical:{{ infisical_db_password | trim }}@infisical-db:5432/infisical"
+      REDIS_URL: "redis://infisical-redis:6379"
+      TELEMETRY_ENABLED: "false"
+
+infisical_db_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31353136316636306461343731656238333463613931616234386265623962616630616438653233
+          3733343031363665323738653431393235613336656531650a666630346130393566633964643063
+          31613235343861626537646261316164613037643364303436363531353132313138386130303963
+          6665323064653034390a353536323035383131343363613138303161376666376232313438363138
+          38313731666135656534383965333332373935393866653231333663633937656535326234303962
+          39363134306463303162373335303361633365666536333937653534353938316434663464653732
+          383836393732396463643633323938633537
+
+infisical_encryption_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33663262623664373765306463366533306165336237363766333664316564626437626262313039
+          6464623032653635356366643830353236353334393336350a643138636533313463343063343630
+          65656561326561306261336432633065383938343531343535393233663538376133383039373136
+          3639356632663839650a336536373939636238653361313866653864373761363566336232323563
+          61626135393066346239333966363138383466623666313533333433303866633035393337323239
+          3632663533353536343535376466613031626632616230303639
+
+infisical_auth_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31626231636365653533643039373136326362353263366531663231653734306165373931313336
+          3733646138386238656535323664326266306664323639650a616366373232306437386536616362
+          36396333363735643737613832623763326433373463653434636664303931616162643631353637
+          6632326163323535310a386365613964643462393335373061393732303238633335663536316438
+          63616366653862336666323863323030366535353562303638343062663931336266383165386138
+          3962306537323338346539376265356631346230313337383633

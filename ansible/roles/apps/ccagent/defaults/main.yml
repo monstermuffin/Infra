@@ -10,7 +10,7 @@ ccagent_remote_control_name: "{{ inventory_hostname.split('.')[0] }}"
 ccagent_remote_control_spawn: ""
 
 ccagent_ansible_ssh_key: ""
-ccagent_ansible_ssh_key_dest: "{{ ccagent_home }}/.ssh/ansible_ccagent"
+ccagent_ansible_ssh_key_dest: "{% if ccagent_infisical_enabled | bool %}/run/ccagent-secrets/ansible_ccagent{% else %}{{ ccagent_home }}/.ssh/ansible_ccagent{% endif %}"
 ccagent_ssh_config_hosts: "*.muffn.io"
 
 ccagent_git_crypt_key: ""
@@ -20,6 +20,13 @@ ccagent_github_app_installation_id: ""
 ccagent_github_app_slug: ""
 ccagent_github_app_user_id: ""
 ccagent_github_app_private_key: ""
+
+ccagent_infisical_enabled: false
+ccagent_infisical_api_url: ""
+ccagent_infisical_project_id: ""
+ccagent_infisical_env_slug: "prod"
+ccagent_infisical_client_id: ""
+ccagent_infisical_client_secret: ""
 
 ccagent_mcphub_url: ""
 ccagent_mcphub_bearer_key: ""

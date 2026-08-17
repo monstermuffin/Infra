@@ -16,7 +16,9 @@
     group: "{{ ccagent_user }}"
     mode: "0600"
   no_log: true
-  when: ccagent_ansible_ssh_key | length > 0
+  when:
+    - not (ccagent_infisical_enabled | bool)
+    - ccagent_ansible_ssh_key | length > 0
   tags: [ssh, secrets, configure]
 
 - name: Deploy ccagent SSH client config

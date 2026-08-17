@@ -13,7 +13,7 @@ root_authorized_keys: |
 ansible_authorized_keys: |
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDKO8yrc2rO/BqbUYVDJ8SMJ8rj5VnQgyr/pew12oQWw ansible_new
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDZoTAFu8kWMNXD5iGLuAOMZpCWthDc4S/45jokrAc2q muffin@mbp.internal.muffn.io
-  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH9CLL3FhNLdd0LBaSc4gqi1fMtj/jfadK0NlaV9q2C1 ccagent@ccagent01.lcy.muffn.io
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKII29zg3MFPlpsfFNw6clhjGGu88vgL7PkjYPDFEaNv ccagent@ccagent01.lcy.muffn.io
 
 muffin_authorized_keys: |
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDZoTAFu8kWMNXD5iGLuAOMZpCWthDc4S/45jokrAc2q muffin@mbp.internal.muffn.io
