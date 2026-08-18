@@ -39,6 +39,7 @@ keyed_groups:
 
 filters:
   - (proxmox_tags | default('')) is search('ansible')
+  - proxmox_status == 'running'
 
 hostnames:
   - proxmox_name

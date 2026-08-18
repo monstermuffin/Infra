@@ -2,11 +2,10 @@
 # Apps declared in host_vars under `podman_apps` dict.
 #
 # Target all podman app hosts (requires 'podman_app' tag set in Proxmox):
-#   ansible-playbook playbooks/lxc/deploy_podman_app.yml
+#   ops/ansible_playbook.sh playbooks/lxc/deploy_podman_app.yml
 #
 # Target a single host:
-#   ansible-playbook playbooks/lxc/deploy_podman_app.yml --limit tag_radarr01
-#   ansible-playbook playbooks/lxc/deploy_podman_app.yml --limit radarr01.aah.muffn.io
+#   ansible-playbook playbooks/lxc/deploy_podman_app.yml --limit radarr01.aah.muffn.io -e dispatch_fail_offline=true
 #
 # Deploy - skip Proxmox note:
 #   ansible-playbook playbooks/lxc/deploy_podman_app.yml --tags deploy

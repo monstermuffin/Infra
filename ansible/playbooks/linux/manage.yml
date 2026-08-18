@@ -1,7 +1,7 @@
 ---
 # Manage Linux guest OS configuration.
-#   ansible-playbook playbooks/linux/manage.yml
-#   ansible-playbook playbooks/linux/manage.yml --limit ingress01.aah.muffn.io
+#   ops/ansible_playbook.sh playbooks/linux/manage.yml
+#   ansible-playbook playbooks/linux/manage.yml --limit ingress01.aah.muffn.io -e dispatch_fail_offline=true
 #   ansible-playbook playbooks/linux/manage.yml --limit 'linux_guests:&tag_app_ingress'
 
 - name: Manage Linux guests
@@ -13,23 +13,9 @@
     ansible_user: "{{ linux_manage_user | default('ansible') }}"
     linux_manage_is_qemu_guest: "{{ proxmox_vmtype | default('') == 'qemu' }}"
     linux_base_manage_qemu_guest_agent: "{{ linux_manage_is_qemu_guest }}"
-    linux_manage_require_online: "{{ dispatch_fail_offline | default(false) | bool }}"
   become: true
 
   pre_tasks:
-    - name: Wait for SSH
-      ansible.builtin.wait_for_connection:
-        sleep: "{{ 5 if (linux_manage_require_online | bool) else 2 }}"
-        timeout: "{{ (linux_manage_wait_for_connection_timeout | default(300)) if (linux_manage_require_online | bool) else (linux_manage_ssh_probe_timeout | default(15)) }}"
-      register: linux_manage_ssh
-      ignore_errors: "{{ not (linux_manage_require_online | bool) }}"
-
-    - name: Skip guests that did not answer SSH
-      ansible.builtin.meta: end_host
-      when:
-        - not (linux_manage_require_online | bool)
-        - linux_manage_ssh is not succeeded
-
     - name: Check if cloud-init is installed
       ansible.builtin.stat:
         path: /usr/bin/cloud-init
@@ -47,7 +33,6 @@
         )
       when:
         - linux_manage_is_qemu_guest | bool
-        - linux_manage_cloud_init_binary is succeeded
         - linux_manage_cloud_init_binary.stat.exists
 
   roles:

@@ -4,7 +4,7 @@
 
 - name: Manage Linux guests
   hosts: "{{ target | default('linux_guests:&proxmox_all_running') }}"
-  gather_facts: true
+  gather_facts: false
   ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
   vars:
     ansible_user: "{{ linux_manage_user | default(lxc_manage_user | default('ansible')) }}"
