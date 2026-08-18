@@ -50,6 +50,27 @@
   when: ccagent_infisical_enabled | bool
   tags: [tooling, install]
 
+- name: Check for legacy NodeSource keyring
+  ansible.builtin.stat:
+    path: /usr/share/keyrings/nodesource.gpg
+  register: ccagent_nodesource_gpg
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
+- name: Remove conflicting NodeSource apt configuration
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/nodesource.list
+    - /etc/apt/sources.list.d/nodesource.sources
+    - /usr/share/keyrings/nodesource.gpg
+  when:
+    - ccagent_infisical_enabled | bool
+    - ccagent_nodesource_gpg is succeeded
+    - ccagent_nodesource_gpg.stat.exists
+  tags: [tooling, install]
+
 - name: Install NodeSource apt signing key
   ansible.builtin.get_url:
     url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
