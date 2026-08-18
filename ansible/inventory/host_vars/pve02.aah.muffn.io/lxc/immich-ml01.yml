@@ -7,7 +7,7 @@ pve_lxcs_immich_ml01:
     cores: 6
     memory: 8192
     swap: 512
-    disk: "16G"
+    disk: "64G"
     storage: "local-zfs"
     network_ip: "10.82.10.137/24"
     network_gw: "10.82.10.1"
