@@ -95,8 +95,8 @@
     - _app.network_mode is not defined
 
 - name: Wait for nftables rules to propagate for {{ _app_name }}
-  ansible.builtin.pause:
-    seconds: 3
+  ansible.builtin.command: sleep 3
+  changed_when: false
   when:
     - _app.service_start | default(true)
     - _quadlet_result.changed or _image_changed or _setup_changed
