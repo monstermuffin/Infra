@@ -1,14 +1,25 @@
 ---
+- name: Check which mountpoints are currently active
+  ansible.builtin.command:
+    cmd: "mountpoint -q {{ item.mountpoint }}"
+  loop: "{{ pve_nfs_mounts }}"
+  loop_control:
+    label: "{{ item.mountpoint }}"
+  register: _nfs_mountpoint_active
+  changed_when: false
+  failed_when: false
+
 - name: Create mountpoint directories
   ansible.builtin.file:
-    path: "{{ item.mountpoint }}"
+    path: "{{ item.item.mountpoint }}"
     state: directory
     owner: root
     group: root
     mode: "0775"
-  loop: "{{ pve_nfs_mounts }}"
+  loop: "{{ _nfs_mountpoint_active.results }}"
   loop_control:
-    label: "{{ item.mountpoint }}"
+    label: "{{ item.item.mountpoint }}"
+  when: item.rc != 0
 
 - name: Derive systemd unit names from mountpoints
   ansible.builtin.command:
@@ -22,10 +33,14 @@
 - name: Build mount definition list with unit names
   ansible.builtin.set_fact:
     _nfs_mount_defs: >-
-      {{ _nfs_mount_defs | default([]) + [item.item | combine({'unit_name': item.stdout | trim})] }}
+      {{ _nfs_mount_defs | default([]) + [item.item | combine({
+           'unit_name': item.stdout | trim,
+           'currently_mounted': _nfs_mountpoint_active.results[idx].rc == 0
+         })] }}
   loop: "{{ _nfs_unit_names.results }}"
   loop_control:
     label: "{{ item.item.name }}"
+    index_var: idx
 
 - name: Template systemd mount units
   ansible.builtin.template:
@@ -54,15 +69,24 @@
 - name: Flush handlers to reload systemd
   ansible.builtin.meta: flush_handlers
 
-- name: Enable and start automount units
+- name: Enable automount units
   ansible.builtin.systemd:
     name: "{{ item.unit_name }}.automount"
     enabled: true
+    daemon_reload: false
+  loop: "{{ _nfs_mount_defs }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Start automount units (only when mountpoint not currently active)
+  ansible.builtin.systemd:
+    name: "{{ item.unit_name }}.automount"
     state: started
     daemon_reload: false
   loop: "{{ _nfs_mount_defs }}"
   loop_control:
     label: "{{ item.name }}"
+  when: not item.currently_mounted
 
 - name: Verify mounts are accessible
   ansible.builtin.command:
