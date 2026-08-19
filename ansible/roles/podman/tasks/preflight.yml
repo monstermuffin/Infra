@@ -7,6 +7,12 @@
 - name: Gather facts if not already present
   ansible.builtin.setup:
   when: ansible_os_family is not defined
+  failed_when: false
+  tags: always
+
+- name: End host if facts could not be gathered
+  ansible.builtin.meta: end_host
+  when: ansible_os_family is not defined
   tags: always
 
 - name: Validate podman user configuration
