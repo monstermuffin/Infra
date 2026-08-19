@@ -5,7 +5,7 @@ pve_intel_gpu_tools_install: true
 
 # schedutil set to attempt to fix power management of i9-13900K crashing my fucking shit. Fuck you intel.
 pve_power_mgmt_enabled: true
-pve_power_mgmt_cpu_governor: "schedutil"
+pve_power_mgmt_cpu_governor: "powersave"
 pve_power_mgmt_cpu_epp: "balance_performance"
 pve_power_mgmt_cpu_persistent: true
 pve_power_mgmt_wol_disable: false
