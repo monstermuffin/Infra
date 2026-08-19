@@ -7,6 +7,7 @@
 - name: Manage Linux guests
   hosts: "{{ target | default('linux_guests:&proxmox_all_running') }}"
   gather_facts: false
+  strategy: free
   # dispatch_fail_offline=true so a targeted guest being down fails the run.
   ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
   vars:

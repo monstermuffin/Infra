@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
+from itertools import groupby
 from pathlib import Path
 
 try:
@@ -404,14 +405,42 @@ def _write_script(commands: list[CommandSpec], dry_run: bool) -> None:
     if not sorted_commands:
         lines.append("echo 'Nothing to run.'")
     else:
-        for command in sorted_commands:
-            cmd = command.render()
-            lines.append(f'echo "==> [{command.workdir.name}] {cmd}"')
-            lines.append(f"if ! (cd {shlex.quote(str(command.workdir))} && {cmd}); then")
-            lines.append("  ((failures+=1))")
-            lines.append(f"  failed_commands+=({shlex.quote(f'[{command.workdir.name}] {cmd}')})")
-            lines.append("fi")
-            lines.append("")
+        for priority, grp in groupby(sorted_commands, key=lambda c: c.priority):
+            group = list(grp)
+            if len(group) == 1:
+                command = group[0]
+                cmd = command.render()
+                lines.append(f'echo "==> [{command.workdir.name}] {cmd}"')
+                lines.append(f"if ! (cd {shlex.quote(str(command.workdir))} && {cmd}); then")
+                lines.append("  ((failures+=1))")
+                lines.append(f"  failed_commands+=({shlex.quote(f'[{command.workdir.name}] {cmd}')})")
+                lines.append("fi")
+                lines.append("")
+            else:
+                # Parallel dispatch of multiple commands at the same priority.
+                lines.append(f"# Priority {priority}: {len(group)} command(s) — running in parallel")
+                lines.append("")
+                entries: list[tuple[int, CommandSpec, str, str]] = []
+                for i, command in enumerate(group):
+                    cmd = command.render()
+                    log = f"/tmp/dispatch_p{priority}_{i}.log"
+                    label = f"[{command.workdir.name}] {cmd}"
+                    lines.append(f'echo "==> (parallel) {label}"')
+                    lines.append(
+                        f"(cd {shlex.quote(str(command.workdir))} && {cmd})"
+                        f" > {shlex.quote(log)} 2>&1 &"
+                    )
+                    lines.append(f"_pid_{priority}_{i}=$!")
+                    entries.append((i, command, log, label))
+                lines.append("")
+                for i, command, log, label in entries:
+                    lines.append(f'echo "--- {label} ---"')
+                    lines.append(f"if ! wait $_pid_{priority}_{i}; then")
+                    lines.append("  ((failures+=1))")
+                    lines.append(f"  failed_commands+=({shlex.quote(label)})")
+                    lines.append("fi")
+                    lines.append(f"cat {shlex.quote(log)}")
+                    lines.append("")
 
     lines.extend([
         "if (( failures > 0 )); then",

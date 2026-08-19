@@ -7,6 +7,7 @@
   hosts: "{{ target | default('tag_podman_app') }}"
   become: true
   gather_facts: true
+  strategy: free
   ignore_unreachable: "{{ not (dispatch_fail_offline | default(false) | bool) }}"
 
   tasks:
