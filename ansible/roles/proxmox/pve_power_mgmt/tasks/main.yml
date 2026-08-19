@@ -24,7 +24,13 @@
     - power_apply
   block:
     - name: Configure CPU governor and EPP
-      ansible.builtin.include_tasks: cpu.yml
+      ansible.builtin.include_tasks:
+        file: cpu.yml
+        apply:
+          tags:
+            - cpu
+            - governor
+            - epp
       when: >
         (pve_power_mgmt_cpu_governor | length > 0) or
         (pve_power_mgmt_cpu_epp | length > 0)
@@ -34,13 +40,21 @@
         - epp
 
     - name: Configure Wake-on-LAN
-      ansible.builtin.include_tasks: wol.yml
+      ansible.builtin.include_tasks:
+        file: wol.yml
+        apply:
+          tags:
+            - wol
       when: pve_power_mgmt_wol_disable | bool
       tags:
         - wol
 
     - name: Configure USB autosuspend
-      ansible.builtin.include_tasks: usb.yml
+      ansible.builtin.include_tasks:
+        file: usb.yml
+        apply:
+          tags:
+            - usb
       when: pve_power_mgmt_usb_autosuspend | bool
       tags:
         - usb
