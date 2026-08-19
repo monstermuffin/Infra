@@ -10,6 +10,7 @@ pve_nfs_default_options:
   nfsvers: "4.2"
   hard: true
   noatime: true
+  _netdev: true
 
 # Sources and mounts should be defined in host_vars/group_vars
 #
