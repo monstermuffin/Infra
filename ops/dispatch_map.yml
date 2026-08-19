@@ -84,6 +84,10 @@ rules:
   - pattern: "ansible/inventory/host_vars/runner*"
     action: manual_notice
 
+  - pattern: "ansible/roles/apps/ccagent/**"
+    playbook: "ansible/playbooks/lxc/deploy_ccagent.yml"
+    limit: "tag_app_ccagent"
+
   - pattern: "ansible/roles/apps/github_runner/**/*"
     action: manual_notice
 

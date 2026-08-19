@@ -33,6 +33,7 @@
         )
       when:
         - linux_manage_is_qemu_guest | bool
+        - linux_manage_cloud_init_binary.stat is defined
         - linux_manage_cloud_init_binary.stat.exists
 
   roles:
