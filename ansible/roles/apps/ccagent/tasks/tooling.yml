@@ -1,4 +1,15 @@
 ---
+- name: Remove stale NodeSource apt configuration
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/nodesource.list
+    - /etc/apt/sources.list.d/nodesource.sources
+    - /usr/share/keyrings/nodesource.gpg
+  when: ccagent_infisical_enabled | bool
+  tags: [tooling, install]
+
 - name: Install ccagent tooling system dependencies
   ansible.builtin.apt:
     name:
@@ -47,17 +58,6 @@
   ansible.builtin.apt:
     name: terraform
     state: present
-  when: ccagent_infisical_enabled | bool
-  tags: [tooling, install]
-
-- name: Remove conflicting NodeSource apt configuration
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /etc/apt/sources.list.d/nodesource.list
-    - /etc/apt/sources.list.d/nodesource.sources
-    - /usr/share/keyrings/nodesource.gpg
   when: ccagent_infisical_enabled | bool
   tags: [tooling, install]
 
