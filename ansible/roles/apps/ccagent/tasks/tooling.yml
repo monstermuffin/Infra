@@ -1,5 +1,5 @@
 ---
-- name: Remove stale NodeSource apt configuration
+- name: Remove stale third-party apt keyrings and source lists
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
@@ -7,6 +7,12 @@
     - /etc/apt/sources.list.d/nodesource.list
     - /etc/apt/sources.list.d/nodesource.sources
     - /usr/share/keyrings/nodesource.gpg
+    - /etc/apt/sources.list.d/infisical.list
+    - /etc/apt/sources.list.d/infisical.sources
+    - /usr/share/keyrings/infisical-archive-keyring.gpg
+    - /etc/apt/sources.list.d/hashicorp.list
+    - /etc/apt/sources.list.d/hashicorp.sources
+    - /usr/share/keyrings/hashicorp-archive-keyring.gpg
   when: ccagent_infisical_enabled | bool
   tags: [tooling, install]
 
