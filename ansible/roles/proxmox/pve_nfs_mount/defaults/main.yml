@@ -3,6 +3,9 @@ pve_nfs_enabled: false
 pve_nfs_install_utils: true
 pve_nfs_mount_timeout: 30
 
+# Retry in sec for failed mount
+pve_nfs_mount_restart_sec: 30
+
 # 0 = never unmount, required for host paths bind-mounted into LXCs
 pve_nfs_automount_timeout_idle: 0
 

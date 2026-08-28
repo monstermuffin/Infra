@@ -17,6 +17,7 @@
 Description=CIFS mount {{ item.name }} (//{{ pve_cifs_sources[item.source].server }}/{{ item.share }})
 After=network-online.target
 Requires=network-online.target
+StartLimitIntervalSec=0
 
 [Mount]
 What=//{{ pve_cifs_sources[item.source].server }}/{{ item.share }}
@@ -24,6 +25,8 @@ Where={{ item.mountpoint }}
 Type=cifs
 Options={{ _options_string }}
 TimeoutSec={{ pve_cifs_mount_timeout }}
+Restart=on-failure
+RestartSec={{ pve_cifs_mount_restart_sec }}
 
 [Install]
 WantedBy=multi-user.target

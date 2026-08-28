@@ -4,6 +4,9 @@ pve_cifs_install_utils: true
 pve_cifs_credentials_dir: "/etc/cifs"
 pve_cifs_mount_timeout: 30
 
+# Retry in sec for failed mount
+pve_cifs_mount_restart_sec: 30
+
 # 0 = never unmount, required for LXC bind mounts
 pve_cifs_automount_timeout_idle: 0
 

@@ -14,6 +14,7 @@
 Description=NFS mount {{ item.name }} ({{ pve_nfs_sources[item.source].server }}:{{ pve_nfs_sources[item.source].export }})
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Mount]
 What={{ pve_nfs_sources[item.source].server }}:{{ pve_nfs_sources[item.source].export }}
@@ -21,6 +22,8 @@ Where={{ item.mountpoint }}
 Type=nfs
 Options={{ _options_parts | join(',') }}
 TimeoutSec={{ pve_nfs_mount_timeout }}
+Restart=on-failure
+RestartSec={{ pve_nfs_mount_restart_sec }}
 
 [Install]
 WantedBy=multi-user.target
