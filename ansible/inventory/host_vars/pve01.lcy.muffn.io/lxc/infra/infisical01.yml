@@ -4,7 +4,7 @@ pve_lxcs_infisical01:
     vmid: 131
     hostname: infisical01.lcy.muffn.io
     cores: 2
-    memory: 4096
+    memory: 1024
     swap: 512
     disk: "20G"
     network_ip: "10.83.7.131/24"

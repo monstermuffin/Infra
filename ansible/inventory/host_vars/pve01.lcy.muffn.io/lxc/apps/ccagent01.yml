@@ -4,7 +4,7 @@ pve_lxcs_ccagent01:
     vmid: 119
     hostname: ccagent01.lcy.muffn.io
     cores: 2
-    memory: 2048
+    memory: 4096
     swap: 512
     disk: "16G"
     network_ip: "10.83.7.119/24"
